@@ -1,17 +1,29 @@
+# Entorno virtual
 .venv/
-.ipynb_checkpoints/
+venv/
+ENV/
+env/
 
-# Archivos de caché de Python
+# Caché de Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
-# Archivos del sistema operativo
+# Datos generados automáticamente (se recrean con generadorDeDatos.py)
+data/*.csv
+
+# Reportes y salidas exportadas
+visuals/*.html
+visuals/*.png
+
+# Modelos guardados / checkpoints
+models/*.h5
+models/*.keras
+models/*.pkl
+
+# Archivos de configuración de IDEs y SO
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-
-# Plan de trabajo local
-PASOS_PENDIENTES.md
-
-# Reportes y gráficos generados
-visuals/*.html
