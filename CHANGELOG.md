@@ -91,3 +91,24 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
   `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `backend/statsAnalysis.py`.
 - **Resultado:** el generador produce CSV idénticos (mismo md5), `statsAnalysis.py` da las mismas métricas y
   `main.py` genera los tres gráficos sin errores.
+
+### 7. Módulo de Deep Learning (`tensorflow` / Keras)
+- **Qué:** se implementó `entrenarModeloDeepLearning(dfVentas, epochs=50, batchSize=32)`, una red neuronal de
+  regresión `Dense(32, relu) → Dense(16, relu) → Dense(1, lineal)` que estima `Unidades Vendidas` a partir de
+  `Precio Unitario`, `Canal de Venta`, `Varietal` y `Estacion`. Retorna
+  `(modelo, history, metricasDict, (xTest, yTest, yPred))`; `metricasDict` tiene `r2`, `mae` y `rmse`.
+- **Por qué:** cumplir con la consigna de Aprendizaje Profundo del segundo parcial.
+- **Detalles:**
+  - Mismas variables que `statsAnalysis.py` (One-Hot con `drop_first=True, dtype=float`), con los nombres de
+    columnas tomados de `schema/ventas.py`.
+  - Split 80/20 (`random_state=42`); `StandardScaler` ajustado solo con train.
+  - Adam (`learning_rate=0.01`), pérdida `mse`, métrica `mae`, `validation_split=0.2`, `verbose=0` y semilla
+    fija con `keras.utils.set_random_seed(42)`.
+  - La capa de entrada se declara con `keras.layers.Input(shape=...)` en lugar de `input_shape` en la primera
+    `Dense`, porque Keras 3 desaconseja ese argumento (la arquitectura es la misma).
+  - Bloque `__main__` con resumen de la red, métricas y una muestra de predicciones.
+- **Archivos:** `backend/deepLearning.py` (nuevo contenido).
+- **Resultado (test):** R² 0.873, MAE 17.27, RMSE 21.79 unidades. Supera al modelo OLS (R² 0.662 en todos los
+  datos), probablemente porque la red capta la interacción Varietal × Estación.
+- **Pendiente:** integrar `statsAnalysis` y `deepLearning` en `main.py`; graficar `history` (pérdida) y real vs.
+  predicho; `requirements.txt` ya incluye `tensorflow` y `scikit-learn`, pero sin versiones fijas.

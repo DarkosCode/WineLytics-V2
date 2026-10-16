@@ -79,7 +79,7 @@ python3 main.py
 - **`data/`:** Contiene los archivos de origen de datos generados (`ventas.csv` e `inventario.csv`). _Creado dinámicamente_.
 - **`schema/`:** Define las constantes y estructuras de columnas para evitar errores de nombres.
 - **`sources/`:** Módulos encargados de leer, limpiar y enriquecer los datos de entrada, además del generador de datos sintéticos.
-- **`backend/`:** Análisis estadístico y modelos predictivos. `statsAnalysis.py` ajusta una regresión lineal OLS (`statsmodels`) sobre las ventas y devuelve predicciones y métricas (R², AIC, BIC, coeficientes); se ejecuta de forma independiente con `python3 backend/statsAnalysis.py` (todavía **no** está integrado en `main.py`). `deepLearning.py` está vacío (pendiente).
+- **`backend/`:** Análisis estadístico y modelos predictivos. `statsAnalysis.py` ajusta una regresión lineal OLS (`statsmodels`) sobre las ventas y devuelve predicciones y métricas (R², AIC, BIC, coeficientes); se ejecuta de forma independiente con `python3 backend/statsAnalysis.py`. `deepLearning.py` entrena una red neuronal (Keras / TensorFlow, `Dense 32 → 16 → 1`) que estima las unidades vendidas y devuelve R², MAE y RMSE sobre el conjunto de prueba; se ejecuta con `python3 backend/deepLearning.py`. Ninguno de los dos módulos está integrado todavía en `main.py`.
 - **`.agents/`:** Reglas del proyecto para asistentes de IA (`AGENTS.md`).
 - **`visuals/`:** Contiene los archivos generadores de gráficos (`matplotUtils.py`, `seabornUtils.py`, `plotlyUtils.py`). Aquí también se creará el reporte interactivo HTML.
 - **`dataProcessing.py`:** Módulo ETL principal que procesa, agrupa y consolida la información para que sea consumida por los reportes.
