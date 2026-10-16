@@ -1,7 +1,7 @@
 from dataProcessing import procesarDatos
-from visuals.matplot_utils import graficarEstacionalidadVarietales
-from visuals.seaborn_utils import graficarVentasXCanal
-from visuals.plotly_utils import graficarPlotlyBurbujas
+from visuals.matplotUtils import graficarEstacionalidadVarietales
+from visuals.seabornUtils import graficarVentasXCanal
+from visuals.plotlyUtils import graficarPlotlyBurbujas
 
 def main():
     datos = procesarDatos()

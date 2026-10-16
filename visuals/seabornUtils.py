@@ -11,14 +11,14 @@ def graficarVentasXCanal(df):
         return
 
     plt.figure(figsize=(12, 6))
-    orden_final = df.sort_values(by=Ventas.COL_FECHA)["Mes"].unique()
+    ordenFinal = df.sort_values(by=Ventas.COL_FECHA)[Ventas.COL_MES].unique()
 
     sns.barplot(
         data=df, 
-        x="Mes", 
+        x=Ventas.COL_MES, 
         y=Ventas.COL_UNIDADESV, 
         hue=Ventas.COL_CANAL, 
-        order=orden_final,
+        order=ordenFinal,
         estimator=sum, 
         errorbar=None, 
         palette="viridis"

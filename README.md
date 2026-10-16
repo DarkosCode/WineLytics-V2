@@ -1,13 +1,13 @@
-# WineLitycs - Sistema de Análisis de Bodega
+# WineLytics - Sistema de Análisis de Bodega
 
-"WineLitycs" solo es el nombre ficticio del proyecto, el cual es una herramienta desarrollada en Python para el procesamiento de datos (ETL) y la visualización del rendimiento comercial e inventario de una bodega.
+"WineLytics" solo es el nombre ficticio del proyecto, el cual es una herramienta desarrollada en Python para el procesamiento de datos (ETL) y la visualización del rendimiento comercial e inventario de una bodega.
 Permite analizar la popularidad de los vinos, la estacionalidad de las ventas, los canales de distribución y alertar sobre la necesidad de reposición de stock.
 
 ## 🛠️ Requisitos Previos
 
 tener instalado:
 
-- **Python 3.8 o superior**
+- **Python 3.11 o superior** (requerido por las versiones de `pandas` y `numpy` de `requirements.txt`)
 - **pip** (administrador de paquetes de Python)
 
 ## 🚀 Guía de Instalación y Uso Paso a Paso
@@ -19,8 +19,8 @@ Seguir estos pasos sencillos para clonar, configurar y ejecutar el proyecto en t
 Abre una terminal y clona el proyecto desde tu repositorio de GitHub:
 
 ```bash
-git clone https://github.com/tu-usuario/Parcial1_POAD.git
-cd Parcial1_POAD
+git clone https://github.com/tu-usuario/WineLytics-V2.git
+cd WineLytics-V2
 ```
 
 _(Reemplaza la URL con la dirección real)._
@@ -79,6 +79,8 @@ python3 main.py
 - **`data/`:** Contiene los archivos de origen de datos generados (`ventas.csv` e `inventario.csv`). _Creado dinámicamente_.
 - **`schema/`:** Define las constantes y estructuras de columnas para evitar errores de nombres.
 - **`sources/`:** Módulos encargados de leer, limpiar y enriquecer los datos de entrada, además del generador de datos sintéticos.
-- **`visuals/`:** Contiene los archivos generadores de gráficos (`matplot_utils.py`, `seaborn_utils.py`, `plotly_utils.py`). Aquí también se creará el reporte interactivo HTML.
+- **`backend/`:** Análisis estadístico y modelos predictivos. `statsAnalysis.py` ajusta una regresión lineal OLS (`statsmodels`) sobre las ventas y devuelve predicciones y métricas (R², AIC, BIC, coeficientes); se ejecuta de forma independiente con `python3 backend/statsAnalysis.py` (todavía **no** está integrado en `main.py`). `deepLearning.py` está vacío (pendiente).
+- **`.agents/`:** Reglas del proyecto para asistentes de IA (`AGENTS.md`).
+- **`visuals/`:** Contiene los archivos generadores de gráficos (`matplotUtils.py`, `seabornUtils.py`, `plotlyUtils.py`). Aquí también se creará el reporte interactivo HTML.
 - **`dataProcessing.py`:** Módulo ETL principal que procesa, agrupa y consolida la información para que sea consumida por los reportes.
 - **`main.py`:** Orquestador principal del proyecto.

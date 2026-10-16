@@ -51,3 +51,43 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
 - **Pendiente:** el modelo suma los efectos por separado y no captura "tinto en Invierno" ni "Torrontés en Verano"
   (subestima Torrontés en Verano). Agregar la interacción Varietal × Estación debería llevar el R² a ~0.88 (valor medido en la entrada 2, con Línea incluida).
   `Canal de Venta` no resultó significativo (p = 0.96).
+
+### 4. Revisión de documentación (README)
+- **Qué:** se corrigió el nombre (`WineLitycs` → `WineLytics`), el nombre del repo en el `git clone`
+  (`Parcial1_POAD` → `WineLytics-V2`) y la versión mínima de Python (3.8 → 3.11, por `pandas 3.x`/`numpy 2.x`).
+  Se agregaron `backend/` y `.agents/` a la estructura del proyecto.
+- **Por qué:** el README no reflejaba el estado actual del proyecto.
+- **Archivos:** `README.md`.
+- **Pendiente:** integrar `ejecutar_analisis_estadistico` en `main.py`; `backend/deep_learning.py` sigue vacío;
+  `requirements.txt` mezcla versiones fijadas con rangos (`>=`) y sus dependencias (`dash`, `flask`, `tensorflow`)
+  no se usan aún.
+
+### 5. Migración del código a camelCase
+- **Qué:** se renombraron archivos (`matplot_utils`→`matplotUtils`, `seaborn_utils`→`seabornUtils`,
+  `plotly_utils`→`plotlyUtils`, `ventas_csv`→`ventasCsv`, `inventario_csv`→`inventarioCsv`,
+  `stats_analysis`→`statsAnalysis`, `deep_learning`→`deepLearning`), funciones y variables de
+  `generadorDeDatos.py`, `statsAnalysis.py` y los `sources`/`visuals` (p. ej. `generar_ventas`→`generarVentas`,
+  `ejecutar_analisis_estadistico`→`ejecutarAnalisisEstadistico`, claves `r2_adj`→`r2Adj`, `f_pvalue`→`fPvalue`).
+- **Por qué:** unificar el estilo de nombres del proyecto.
+- **Detalles:** se mantienen sin cambios las constantes en MAYÚSCULAS (`COL_*`, `BASE_DIR`), los nombres de
+  las librerías y los encabezados de los CSV (`Stock_Actual`, `Unidades_Vendidas`, etc.).
+- **Archivos:** todos los `.py`, `README.md`. Imports actualizados con `git mv`.
+- **Resultado:** `statsAnalysis.py` da los mismos resultados (R² 0.662, 0 advertencias) y los gráficos
+  de Matplotlib/Seaborn y el generador corren sin errores.
+- **Corrección:** las claves del diccionario de métricas (`r2_adj`, `f_pvalue`) quedaron sin migrar en esta
+  entrada; se pasaron a `r2Adj` y `fPvalue` en la entrada 6.
+
+### 6. Centralización de constantes de columnas en `schema/`
+- **Qué:** `schema/ventas.py` y `schema/inventario.py` ahora definen también las columnas derivadas
+  (`COL_INGRESO`, `COL_MES`, `COL_PREDICCION`, `COL_REPOSICION_NECESARIA`) y los encabezados originales de los
+  CSV (`CSV_*`). Todos los módulos las importan en lugar de repetir el texto.
+- **Por qué:** cambiar un nombre de columna en un solo lugar, sin strings desactualizados que fallen en silencio.
+- **Detalles:**
+  - `statsAnalysis.py` ya no redefine los nombres: los toma de `Ventas`.
+  - `generadorDeDatos.py` escribe los encabezados con `CSV_*` y agrega la raíz del proyecto al `sys.path`
+    para poder importar `schema` al ejecutarse como script.
+  - Claves de métricas: `r2_adj`→`r2Adj`, `f_pvalue`→`fPvalue`.
+- **Archivos:** `schema/ventas.py`, `schema/inventario.py`, `sources/*`, `dataProcessing.py`,
+  `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `backend/statsAnalysis.py`.
+- **Resultado:** el generador produce CSV idénticos (mismo md5), `statsAnalysis.py` da las mismas métricas y
+  `main.py` genera los tres gráficos sin errores.

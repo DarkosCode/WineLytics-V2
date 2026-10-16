@@ -5,23 +5,23 @@ from schema.inventario import Inventario
 
 def cargarInventario():
     #? ↘ Esto asegura q se lea siempre bien la ruta, sea donde sea que estes parado
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ruta_csv = os.path.join(base_dir, "data", "inventario.csv")
+    baseDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    rutaCsv = os.path.join(baseDir, "data", "inventario.csv")
     
-    dfCsv = pd.read_csv(ruta_csv)
+    dfCsv = pd.read_csv(rutaCsv)
     
     #? Renombrar columnas para que coincidan con el 'schema'
-    dfCsv = dfCsv.rename(columns={"Varietal": Inventario.COL_VARIETAL,
-                                  "Linea": Inventario.COL_LINEA,
-                                  "Stock_Actual": Inventario.COL_STOCK,
-                                  "Punto_Reposicion": Inventario.COL_REPOSICION})     
+    dfCsv = dfCsv.rename(columns={Inventario.CSV_VARIETAL: Inventario.COL_VARIETAL,
+                                  Inventario.CSV_LINEA: Inventario.COL_LINEA,
+                                  Inventario.CSV_STOCK: Inventario.COL_STOCK,
+                                  Inventario.CSV_REPOSICION: Inventario.COL_REPOSICION})     
     
     #? Limpieza de nulos, convertidor de valores float
     dfCsv[Inventario.COL_STOCK] = dfCsv[Inventario.COL_STOCK].fillna(0).astype(int)
         #* Ayudita propia de memoria; el metodo fillna() solo va a convertir a 0 los valores NaN
 
     #? Columna agregada, que dice si se necesita reposicion, teniendo en cuenta el stock y el punto
-    dfCsv['Reposicion Necesaria'] = np.where(
+    dfCsv[Inventario.COL_REPOSICION_NECESARIA] = np.where(
         dfCsv[Inventario.COL_STOCK] < dfCsv[Inventario.COL_REPOSICION], "SI", "NO")
 
     return dfCsv
