@@ -19,11 +19,9 @@ Seguir estos pasos sencillos para clonar, configurar y ejecutar el proyecto en t
 Abre una terminal y clona el proyecto desde tu repositorio de GitHub:
 
 ```bash
-git clone https://github.com/tu-usuario/WineLytics-V2.git
+git clone https://github.com/DarkosCode/WineLytics-V2.git
 cd WineLytics-V2
 ```
-
-_(Reemplaza la URL con la dirección real)._
 
 ### Paso 2: Configurar el entorno virtual (Recomendado)
 
@@ -67,10 +65,15 @@ python3 main.py
 ```
 
 - **Flujo del programa al ejecutar `main.py`:**
-  1. **Procesamiento (ETL):** El sistema lee, limpia, calcula los ingresos de ventas, determina las estaciones y cruza las ventas con el stock físico.
-  2. **Gráfico 1 (Matplotlib):** Se abrirá un mapa de calor que analiza las ventas de cada varietal por estación del año. **Debes cerrar esta ventana de gráfico para continuar.**
-  3. **Gráfico 2 (Seaborn):** Se abrirá un gráfico de barras comparando las ventas mensuales en el Mercado Interno vs. Exportación. **Debes cerrar esta ventana para continuar.**
-  4. **Gráfico 3 (Plotly):** Generará un archivo HTML interactivo en `visuals/reporte_interactivo.html` y abrirá una pestaña en tu navegador predeterminado para que puedas interactuar con el gráfico de burbujas (hacer zoom, filtrar por leyenda, ver detalles al pasar el cursor).
+  1. **Procesamiento (ETL) + Modelos Analíticos (`dataProcessing.py`):**
+     - Lee, limpia y transforma `ventas.csv` e `inventario.csv`.
+     - Ejecuta `backend/statsAnalysis.py` (estadística descriptiva con `numpy`/`scipy` y regresión OLS con `statsmodels`, agregando `Prediccion_Ventas`).
+     - Ejecuta `backend/deepLearning.py` (red neuronal `Dense 32 → 16 → 1` con `Keras`/`TensorFlow`, agregando `Prediccion_DL`).
+     - Consolida inventario, ventas reales y pronósticos por Varietal y Línea.
+  2. **Gráficos Estáticos con Estilo Unificado (`Matplotlib` y `Seaborn`):**
+     - Guarda automáticamente `visuals/estacionalidadDeVentas.png` (mapa de calor de unidades por varietal y estación) y `visuals/UnidadesXCanalyMes.png` (barras de ventas mensuales por canal en español) sin bloquear la ejecución con ventanas emergentes.
+  3. **Dashboard HTML Unificado (`visuals/reporte_interactivo.html`):**
+     - Genera y abre en el navegador un único dashboard autocontenido que incluye: **barra de filtros interactivos**, **tarjetas de KPIs**, **gráficos interactivos de Plotly** (inventario vs. ventas, comparativa Real vs. OLS vs. Deep Learning y curva de aprendizaje MSE), los **gráficos de Matplotlib y Seaborn incrustados en Base64**, las tablas de **Estadística Descriptiva / OLS** y un **Simulador de Demanda por Transacción**.
 
 ---
 
@@ -78,9 +81,11 @@ python3 main.py
 
 - **`data/`:** Contiene los archivos de origen de datos generados (`ventas.csv` e `inventario.csv`). _Creado dinámicamente_.
 - **`schema/`:** Define las constantes y estructuras de columnas para evitar errores de nombres.
-- **`sources/`:** Módulos encargados de leer, limpiar y enriquecer los datos de entrada, además del generador de datos sintéticos.
-- **`backend/`:** Análisis estadístico y modelos predictivos. `statsAnalysis.py` ajusta una regresión lineal OLS (`statsmodels`) sobre las ventas y devuelve predicciones y métricas (R², AIC, BIC, coeficientes); se ejecuta de forma independiente con `python3 backend/statsAnalysis.py`. `deepLearning.py` entrena una red neuronal (Keras / TensorFlow, `Dense 32 → 16 → 1`) que estima las unidades vendidas y devuelve R², MAE y RMSE sobre el conjunto de prueba; se ejecuta con `python3 backend/deepLearning.py`. Ninguno de los dos módulos está integrado todavía en `main.py`.
+- **`sources/`:** Módulos encargados de leer, limpiar (nulos, duplicados, validación de rangos) y enriquecer los datos de entrada (ingresos, meses en español y estaciones), además del generador de datos sintéticos.
+- **`backend/`:** Análisis estadístico y modelos predictivos integrados al flujo principal:
+  - `statsAnalysis.py`: calcula estadística descriptiva y pruebas de hipótesis (`numpy` / `scipy.stats`: media, mediana, desvío, correlación de Pearson y ANOVA por estación) y ajusta una regresión lineal OLS (`statsmodels`) evaluada tanto in-sample como en el conjunto de prueba (80/20). Se puede ejecutar de forma independiente con `python3 backend/statsAnalysis.py`.
+  - `deepLearning.py`: entrena una red neuronal (`Keras` / `TensorFlow`, `Dense 32 → 16 → 1`) que estima las unidades vendidas, devuelve métricas sobre el mismo conjunto de prueba (`R²`, `MAE`, `RMSE`) y genera `Prediccion_DL` con `agregarPrediccionesDL()`. Se puede ejecutar de forma independiente con `python3 backend/deepLearning.py`.
 - **`.agents/`:** Reglas del proyecto para asistentes de IA (`AGENTS.md`).
-- **`visuals/`:** Contiene los archivos generadores de gráficos (`matplotUtils.py`, `seabornUtils.py`, `plotlyUtils.py`). Aquí también se creará el reporte interactivo HTML.
-- **`dataProcessing.py`:** Módulo ETL principal que procesa, agrupa y consolida la información para que sea consumida por los reportes.
-- **`main.py`:** Orquestador principal del proyecto.
+- **`visuals/`:** Módulos de visualización con paleta temática "Bodega / Vino" (`matplotUtils.py`, `seabornUtils.py`, `plotlyUtils.py`) y salidas exportadas (`estacionalidadDeVentas.png`, `UnidadesXCanalyMes.png` y el dashboard unificado `reporte_interactivo.html`).
+- **`dataProcessing.py`:** Módulo ETL y analítico principal que ejecuta la limpieza, los modelos de `backend/` y la consolidación de datos.
+- **`main.py`:** Orquestador principal que ejecuta todo el pipeline y construye el dashboard interactivo.

@@ -27,3 +27,11 @@ models/*.pkl
 .idea/
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
+
+# Archivos locales del examen y guías de estudio (no forman parte del código del software)
+consignas_examen_parcial_nro_2.md
+analisis_estado_parcial2.md
+EXPLICACION_FLUJO_PROYECTO.md
+DOCUMENTACION_PARCIAL2.md
+DOCUMENTACION_PARCIAL2.html

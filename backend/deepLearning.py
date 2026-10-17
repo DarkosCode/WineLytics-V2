@@ -39,6 +39,7 @@ COL_PRECIO: str = Ventas.COL_PRECIOU
 COL_CANAL: str = Ventas.COL_CANAL
 COL_VARIETAL: str = Ventas.COL_VARIETAL
 COL_ESTACION: str = Ventas.COL_ESTACION
+COL_PREDICCION_DL: str = Ventas.COL_PREDICCION_DL
 
 #? Variables categóricas que se transforman en dummies (One-Hot Encoding)
 COLUMNAS_CATEGORICAS: List[str] = [COL_CANAL, COL_VARIETAL, COL_ESTACION]
@@ -126,7 +127,8 @@ def entrenarModeloDeepLearning(
 
     Returns:
         Tupla ``(modelo, history, metricasDict, (xTest, yTest, yPred))`` donde:
-            - ``modelo``: red neuronal entrenada.
+            - ``modelo``: red neuronal entrenada (incluye atributos ``_scaler``
+              y ``_columnasX`` para predecir sobre nuevos datos).
             - ``history``: historial de entrenamiento de Keras.
             - ``metricasDict``: diccionario con ``r2``, ``mae`` y ``rmse``
               calculados sobre el conjunto de prueba.
@@ -155,6 +157,10 @@ def entrenarModeloDeepLearning(
 
     modelo = _construirModelo(XTrain.shape[1])
 
+    #? Guardamos scaler y columnas en el modelo para poder predecir sobre cualquier DataFrame luego
+    modelo._scaler = scaler  # type: ignore[attr-defined]
+    modelo._columnasX = list(X.columns)  # type: ignore[attr-defined]
+
     history = modelo.fit(
         XTrain,
         yTrain,
@@ -175,12 +181,35 @@ def entrenarModeloDeepLearning(
     return modelo, history, metricasDict, (xTest, yTest, yPred)
 
 
+def agregarPrediccionesDL(
+    dfVentas: pd.DataFrame,
+    modelo: keras.Sequential,
+) -> pd.DataFrame:
+    """Agrega la columna 'Prediccion_DL' a una copia de ``dfVentas`` usando el modelo entrenado.
+
+    Args:
+        dfVentas: DataFrame de ventas con las columnas requeridas.
+        modelo: Red neuronal devuelta por ``entrenarModeloDeepLearning``.
+
+    Returns:
+        Copia de ``dfVentas`` con la columna ``Prediccion_DL``.
+    """
+    _validarColumnas(dfVentas)
+    dfResultado = dfVentas.copy()
+    X, _ = _prepararVariables(dfResultado)
+    X = X.reindex(columns=modelo._columnasX, fill_value=0.0)  # type: ignore[attr-defined]
+    xEscalado = modelo._scaler.transform(X)  # type: ignore[attr-defined]
+    dfResultado[COL_PREDICCION_DL] = modelo.predict(xEscalado, verbose=0).flatten()
+    return dfResultado
+
+
 if __name__ == "__main__":
     from sources.ventasCsv import cargarVentas
 
     #? cargarVentas() es la fuente oficial: renombra columnas y crea 'Estacion'
     df = cargarVentas()
     modelo, history, metricas, (xTest, yTest, yPred) = entrenarModeloDeepLearning(df)
+    dfConDl = agregarPrediccionesDL(df, modelo)
 
     print("\n=== Resumen de la red neuronal ===")
     modelo.summary()
@@ -190,6 +219,6 @@ if __name__ == "__main__":
     print(f"MAE  : {metricas['mae']:.2f} unidades")
     print(f"RMSE : {metricas['rmse']:.2f} unidades")
 
-    print("\n=== Muestra de predicciones (real vs. estimado) ===")
+    print("\n=== Muestra de predicciones (real vs. estimado en test) ===")
     for real, pred in list(zip(yTest, yPred))[:10]:
         print(f"  Real: {real:>6.0f}   Estimado: {pred:>8.2f}")

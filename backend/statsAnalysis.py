@@ -18,7 +18,11 @@ from typing import Any, Dict, List, Tuple
 import os
 import sys
 
+import numpy as np
 import pandas as pd
+from scipy import stats
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 import statsmodels.api as sm
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 
@@ -32,6 +36,7 @@ from schema.ventas import Ventas
 #? Nombres de columnas (definidos en schema/ventas.py)
 COL_UNIDADES: str = Ventas.COL_UNIDADESV
 COL_PRECIO: str = Ventas.COL_PRECIOU
+COL_INGRESO: str = Ventas.COL_INGRESO
 COL_CANAL: str = Ventas.COL_CANAL
 COL_VARIETAL: str = Ventas.COL_VARIETAL
 COL_ESTACION: str = Ventas.COL_ESTACION
@@ -41,6 +46,10 @@ COL_PREDICCION: str = Ventas.COL_PREDICCION
 COLUMNAS_CATEGORICAS: List[str] = [COL_CANAL, COL_VARIETAL, COL_ESTACION]
 
 COLUMNAS_REQUERIDAS: List[str] = [COL_UNIDADES, COL_PRECIO, *COLUMNAS_CATEGORICAS]
+
+#? Mismo split que backend/deepLearning.py para comparar ambos modelos en igualdad de condiciones
+SEMILLA: int = 42
+TAMANIO_TEST: float = 0.2
 
 
 def _validarColumnas(df: pd.DataFrame) -> None:
@@ -81,6 +90,72 @@ def _prepararVariables(df: pd.DataFrame) -> Tuple[pd.Series, pd.DataFrame]:
     return y, X
 
 
+def calcularEstadisticaDescriptiva(dfVentas: pd.DataFrame) -> Dict[str, Any]:
+    """Calcula métricas descriptivas y pruebas de hipótesis con NumPy y SciPy.
+
+    Incluye:
+    1. Resumen numérico (media, mediana, desvío estándar, mínimo y máximo).
+    2. Correlación lineal de Pearson entre Precio Unitario y Unidades Vendidas.
+    3. Test ANOVA de una vía (``scipy.stats.f_oneway``) de Unidades por Estación.
+
+    Args:
+        dfVentas: DataFrame de ventas ya validado.
+
+    Returns:
+        Diccionario con ``resumen``, ``pearsonPrecioUnidades`` y ``anovaEstacion``.
+    """
+    _validarColumnas(dfVentas)
+
+    columnasNumericas = [COL_UNIDADES, COL_PRECIO]
+    if COL_INGRESO in dfVentas.columns:
+        columnasNumericas.append(COL_INGRESO)
+
+    #? 1. Estadísticos de tendencia central y dispersión con NumPy / Pandas
+    resumen: Dict[str, Dict[str, float]] = {}
+    for col in columnasNumericas:
+        serie = dfVentas[col].astype(float)
+        resumen[col] = {
+            "media": float(np.mean(serie)),
+            "mediana": float(np.median(serie)),
+            "desvio": float(np.std(serie, ddof=1)),
+            "minimo": float(np.min(serie)),
+            "maximo": float(np.max(serie)),
+        }
+
+    #? 2. Correlación de Pearson (SciPy): mide la relación lineal inversa precio-cantidad
+    rPearson, pPearson = stats.pearsonr(
+        dfVentas[COL_PRECIO].astype(float),
+        dfVentas[COL_UNIDADES].astype(float),
+    )
+
+    #? 3. ANOVA de una vía (SciPy): evalúa si la media de unidades difiere entre estaciones
+    gruposEstacion = [
+        grupo[COL_UNIDADES].astype(float).values
+        for _, grupo in dfVentas.groupby(COL_ESTACION)
+    ]
+    fStat, pAnova = stats.f_oneway(*gruposEstacion)
+
+    promedioPorEstacion = (
+        dfVentas.groupby(COL_ESTACION)[COL_UNIDADES]
+        .mean()
+        .round(2)
+        .to_dict()
+    )
+
+    return {
+        "resumen": resumen,
+        "pearsonPrecioUnidades": {
+            "r": float(rPearson),
+            "pValor": float(pPearson),
+        },
+        "anovaEstacion": {
+            "fStat": float(fStat),
+            "pValor": float(pAnova),
+            "promedioPorEstacion": {k: float(v) for k, v in promedioPorEstacion.items()},
+        },
+    }
+
+
 def ejecutarAnalisisEstadistico(
     dfVentas: pd.DataFrame,
 ) -> Tuple[pd.DataFrame, Dict[str, Any], RegressionResultsWrapper]:
@@ -99,9 +174,10 @@ def ejecutarAnalisisEstadistico(
         Tupla ``(dfVentas, metricasDict, modelo)`` donde:
             - ``dfVentas``: copia del DataFrame de entrada con la columna
               nueva 'Prediccion_Ventas'.
-            - ``metricasDict``: diccionario con ``r2``, ``r2Adj``,
-              ``fPvalue``, ``aic``, ``bic`` y ``coeficientes``
-              (``{variable: valor}``).
+            - ``metricasDict``: diccionario con métricas in-sample (``r2``,
+              ``r2Adj``, ``fPvalue``, ``aic``, ``bic``, ``coeficientes``),
+              métricas en el conjunto de prueba 80/20 (``r2Test``, ``maeTest``,
+              ``rmseTest``) y ``descriptiva`` (Pearson, ANOVA y resumen).
             - ``modelo``: resultado ajustado de ``sm.OLS(...).fit()``.
 
     Raises:
@@ -119,13 +195,26 @@ def ejecutarAnalisisEstadistico(
 
     dfResultado[COL_PREDICCION] = modelo.predict(X)
 
+    #? Evaluación en el mismo split 80/20 que usa Deep Learning para una comparación justa
+    XTrain, xTest, yTrain, yTest = train_test_split(
+        X, y, test_size=TAMANIO_TEST, random_state=SEMILLA
+    )
+    modeloTrain = sm.OLS(yTrain, XTrain).fit()
+    yPredTest = modeloTrain.predict(xTest)
+
+    descriptiva = calcularEstadisticaDescriptiva(dfResultado)
+
     metricasDict: Dict[str, Any] = {
         "r2": float(modelo.rsquared),
         "r2Adj": float(modelo.rsquared_adj),
         "fPvalue": float(modelo.f_pvalue),
         "aic": float(modelo.aic),
         "bic": float(modelo.bic),
+        "r2Test": float(r2_score(yTest, yPredTest)),
+        "maeTest": float(mean_absolute_error(yTest, yPredTest)),
+        "rmseTest": float(np.sqrt(mean_squared_error(yTest, yPredTest))),
         "coeficientes": {var: float(coef) for var, coef in modelo.params.items()},
+        "descriptiva": descriptiva,
     }
 
     return dfResultado, metricasDict, modelo
@@ -143,12 +232,31 @@ if __name__ == "__main__":
         df = cargarVentas()
         dfPred, metricas, _ = ejecutarAnalisisEstadistico(df)
 
-    print("\n=== Métricas clave ===")
-    print(f"R²          : {metricas['r2']:.4f}")
-    print(f"R² ajustado : {metricas['r2Adj']:.4f}")
-    print(f"p-valor (F) : {metricas['fPvalue']:.4e}")
-    print(f"AIC         : {metricas['aic']:.2f}")
-    print(f"BIC         : {metricas['bic']:.2f}")
+    desc = metricas["descriptiva"]
+    print("\n=== Estadística descriptiva (NumPy / SciPy) ===")
+    for col, vals in desc["resumen"].items():
+        print(
+            f"  {col:<20} -> Media: {vals['media']:>8.2f} | Mediana: {vals['mediana']:>8.2f} "
+            f"| Desvío: {vals['desvio']:>8.2f} | Rango: [{vals['minimo']:.2f}, {vals['maximo']:.2f}]"
+        )
+    print(
+        f"  Correlación Pearson (Precio vs. Unidades): r = {desc['pearsonPrecioUnidades']['r']:.4f} "
+        f"(p-valor = {desc['pearsonPrecioUnidades']['pValor']:.4e})"
+    )
+    print(
+        f"  ANOVA por Estación (Unidades)            : F = {desc['anovaEstacion']['fStat']:.2f} "
+        f"(p-valor = {desc['anovaEstacion']['pValor']:.4e})"
+    )
+
+    print("\n=== Métricas clave OLS ===")
+    print(f"R² (in-sample) : {metricas['r2']:.4f}")
+    print(f"R² ajustado    : {metricas['r2Adj']:.4f}")
+    print(f"R² (test 20%)  : {metricas['r2Test']:.4f}")
+    print(f"MAE (test 20%) : {metricas['maeTest']:.2f} unidades")
+    print(f"RMSE (test 20%): {metricas['rmseTest']:.2f} unidades")
+    print(f"p-valor (F)    : {metricas['fPvalue']:.4e}")
+    print(f"AIC            : {metricas['aic']:.2f}")
+    print(f"BIC            : {metricas['bic']:.2f}")
     print("Coeficientes:")
     for variable, coef in metricas["coeficientes"].items():
         print(f"  {variable:<35} {coef:>10.4f}")

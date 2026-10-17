@@ -20,12 +20,21 @@ def cargarVentas():
     dfCsv[Ventas.COL_UNIDADESV] = dfCsv[Ventas.COL_UNIDADESV].fillna(0).astype(int)
     dfCsv[Ventas.COL_PRECIOU] = dfCsv[Ventas.COL_PRECIOU].fillna(0).astype(float)
     
-    #? Columa nueva de ingresos totales
+    #? Eliminación de registros duplicados y validación de rangos lógicos (unidades y precios mayores a 0)
+    dfCsv = dfCsv.drop_duplicates()
+    dfCsv = dfCsv[(dfCsv[Ventas.COL_UNIDADESV] > 0) & (dfCsv[Ventas.COL_PRECIOU] > 0)].copy()
+    
+    #? Columna nueva de ingresos totales
     dfCsv[Ventas.COL_INGRESO] = dfCsv[Ventas.COL_UNIDADESV] * dfCsv[Ventas.COL_PRECIOU]
     
-    #? Colunna nueva de mes, extrayeeendo los datos de la columna fecha
+    #? Columna nueva de mes en español, extrayendo el número de mes de la columna fecha
     dfCsv[Ventas.COL_FECHA] = pd.to_datetime(dfCsv[Ventas.COL_FECHA])
-    dfCsv[Ventas.COL_MES] = dfCsv[Ventas.COL_FECHA].dt.month_name()
+    mesesEs = {
+        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+    }
+    dfCsv[Ventas.COL_MES] = dfCsv[Ventas.COL_FECHA].dt.month.map(mesesEs)
     
     #? Columna nueva de Estacion (teniendo en cuenta Argentina/Sudamerica)
     def obtenerEstacion(mes):

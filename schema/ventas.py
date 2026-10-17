@@ -8,10 +8,11 @@ class Ventas:
     COL_PRECIOU = "Precio Unitario"
     COL_ESTACION = "Estacion"
 
-    #? Columnas derivadas (se calculan en sources/ventasCsv.py y backend/statsAnalysis.py)
+    #? Columnas derivadas (se calculan en sources/ventasCsv.py y backend/)
     COL_INGRESO = "Ingreso Total"
     COL_MES = "Mes"
     COL_PREDICCION = "Prediccion_Ventas"
+    COL_PREDICCION_DL = "Prediccion_DL"
 
     #? Encabezados originales de data/ventas.csv (los escribe sources/generadorDeDatos.py)
     CSV_FECHA = "Fecha"

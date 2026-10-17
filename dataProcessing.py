@@ -2,26 +2,60 @@ import pandas as pd
 from sources.inventarioCsv import cargarInventario
 from sources.ventasCsv import cargarVentas
 from schema.ventas import Ventas
+from backend.statsAnalysis import ejecutarAnalisisEstadistico
+from backend.deepLearning import entrenarModeloDeepLearning, agregarPrediccionesDL
+
 
 def procesarDatos():
-    #? Cargar los DataFrames desde los CSV, pero pasando primero por los sources que estructuran
+    #? 1. Cargar los DataFrames desde los CSV pasando por los módulos de limpieza y estructuración (sources/)
     dfInventario = cargarInventario()
     dfVentas = cargarVentas()
-    
-    #? Agrupar las ventas por Varietal y Linea para calcular totales, sumar las columnas "Unidades Vendidas" e "Ingreso Total" de cada vino
-    ventasResumen = dfVentas.groupby([Ventas.COL_VARIETAL, Ventas.COL_LINEA])[[Ventas.COL_UNIDADESV, Ventas.COL_INGRESO]].sum().reset_index()
-    
-    #? Cruzar ('Mergear') el inventario con el resumen de ventas
-    #? Usamos 'inner' porque queremos analizar los vinos que existen en ambos datasets
-    dfConsolidado = pd.merge(dfInventario, ventasResumen, on=[Ventas.COL_VARIETAL, Ventas.COL_LINEA], how='inner') 
-    #? Al hacerlo como inner, se logra que solo se tomen en cnta cuando haya valores en las dos fuentes de datos
-    
-    #? Retornamos los DataFrames estructurados en un diccionario
+
+    #? 2. Ejecutar análisis estadístico (OLS + estadística descriptiva con NumPy/SciPy)
+    #? Agrega la columna 'Prediccion_Ventas' al DataFrame de ventas
+    dfVentas, metricasOls, modeloOls = ejecutarAnalisisEstadistico(dfVentas)
+
+    #? 3. Entrenar modelo de Aprendizaje Profundo (Red Neuronal Keras) y generar 'Prediccion_DL'
+    modeloDl, historyDl, metricasDl, (xTest, yTest, yPredDl) = entrenarModeloDeepLearning(dfVentas)
+    dfVentas = agregarPrediccionesDL(dfVentas, modeloDl)
+
+    #? 4. Agrupar las ventas por Varietal y Línea para calcular totales reales y pronosticados
+    columnasSuma = [
+        Ventas.COL_UNIDADESV,
+        Ventas.COL_INGRESO,
+        Ventas.COL_PREDICCION,
+        Ventas.COL_PREDICCION_DL,
+    ]
+    ventasResumen = (
+        dfVentas.groupby([Ventas.COL_VARIETAL, Ventas.COL_LINEA])[columnasSuma]
+        .sum()
+        .reset_index()
+    )
+
+    #? 5. Cruzar ('Mergear') el inventario con el resumen de ventas e indicadores predictivos
+    dfConsolidado = pd.merge(
+        dfInventario,
+        ventasResumen,
+        on=[Ventas.COL_VARIETAL, Ventas.COL_LINEA],
+        how="inner",
+    )
+
+    #? Retornamos los DataFrames enriquecidos y los resultados del backend en un diccionario unificado
     return {
         "inventario": dfInventario,
         "ventas": dfVentas,
-        "consolidado": dfConsolidado
+        "consolidado": dfConsolidado,
+        "estadistica": metricasOls,
+        "deepLearning": {
+            "metricas": metricasDl,
+            "history": historyDl.history,
+            "yTest": yTest.tolist(),
+            "yPred": yPredDl.tolist(),
+            "modelo": modeloDl,
+        },
+        "modeloOls": modeloOls,
     }
+
 
 if __name__ == "__main__":
     resultados = procesarDatos()

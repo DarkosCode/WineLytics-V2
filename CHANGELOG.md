@@ -112,3 +112,42 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
   datos), probablemente porque la red capta la interacción Varietal × Estación.
 - **Pendiente:** integrar `statsAnalysis` y `deepLearning` en `main.py`; graficar `history` (pérdida) y real vs.
   predicho; `requirements.txt` ya incluye `tensorflow` y `scikit-learn`, pero sin versiones fijas.
+
+---
+
+## 2026-10-17
+
+### 8. Limpieza de ETL, estadística descriptiva (`scipy`) y evaluación justa OLS vs. DL
+- **Qué:**
+  - En `sources/ventasCsv.py` y `sources/inventarioCsv.py` se agregaron eliminación de duplicados (`drop_duplicates`), validación de rangos lógicos (unidades y precios $> 0$, stock $\ge 0$) y traducción de los meses al español (`Enero` a `Diciembre`).
+  - En `schema/ventas.py` se agregó la constante `COL_PREDICCION_DL = "Prediccion_DL"`.
+  - En `backend/statsAnalysis.py` se implementó `calcularEstadisticaDescriptiva(dfVentas)` con `numpy` y `scipy.stats` (resumen de media/mediana/desvío/rango, correlación de Pearson `pearsonr` entre precio y unidades, y test ANOVA de una vía `f_oneway` de unidades por estación). Además, `ejecutarAnalisisEstadistico` ahora evalúa también el OLS sobre el mismo split 80/20 (`random_state=42`) que usa la red neuronal, agregando `r2Test`, `maeTest`, `rmseTest` y `descriptiva` a `metricasDict`.
+  - En `backend/deepLearning.py` se agregó la función auxiliar `agregarPrediccionesDL(dfVentas, modelo)` para generar la columna `Prediccion_DL` sobre el DataFrame completo reutilizando el `StandardScaler` ajustado en entrenamiento.
+- **Por qué:** completar los criterios de ETL y Estadística de la rúbrica del Parcial 2, corregir los meses en inglés y permitir una comparación metodológicamente justa entre OLS y Deep Learning sobre el mismo conjunto de prueba.
+- **Archivos:** `schema/ventas.py`, `sources/ventasCsv.py`, `sources/inventarioCsv.py`, `backend/statsAnalysis.py`, `backend/deepLearning.py`.
+- **Resultado:**
+  - Estadística descriptiva: correlación Precio–Unidades $r = -0.7324$ ($p \approx 3.06 \times 10^{-202}$); ANOVA por estación $F = 43.52$ ($p \approx 1.08 \times 10^{-26}$).
+  - Comparación justa en test (20%, semilla 42): OLS obtiene $R^2 = 0.6739$, $\text{MAE} = 27.62$, $\text{RMSE} = 34.97$, mientras que la red neuronal logra $R^2 = 0.8734$, $\text{MAE} = 17.27$, $\text{RMSE} = 21.79$.
+- **Pendiente:** unificar paleta visual y construir el reporte HTML único interactivo integrado en `main.py`.
+
+### 9. Guía de estilo unificada, integración en `dataProcessing.py`/`main.py` y Dashboard HTML único
+- **Qué:**
+  - Se aplicó una paleta temática "Bodega / Vino" (`#722F37` bordó, `#A4133C` carmín, `#C59B27` dorado, `#C0392B` alerta, `#27AE60` stock OK, fondo `#FAF7F5`, fuente `Arial`) en `visuals/matplotUtils.py`, `visuals/seabornUtils.py` y `visuals/plotlyUtils.py`.
+  - En `visuals/matplotUtils.py` se corrigió el subtítulo del heatmap a `(Suma de Unidades Vendidas)` y tanto `matplotUtils.py` como `seabornUtils.py` ahora exportan automáticamente sus PNG (`visuals/estacionalidadDeVentas.png` y `visuals/UnidadesXCanalyMes.png`) sin bloquear con `plt.show()` por defecto.
+  - En `dataProcessing.py`, `procesarDatos()` ahora invoca `ejecutarAnalisisEstadistico` y `entrenarModeloDeepLearning` + `agregarPrediccionesDL`, enriqueciendo `dfVentas` y `dfConsolidado` con `Prediccion_Ventas` y `Prediccion_DL` y retornando las métricas y el historial de entrenamiento.
+  - En `visuals/plotlyUtils.py` se implementó `generarDashboardHtml(...)`, que construye un único archivo autocontenido `visuals/reporte_interactivo.html` con: barra de filtros interactivos (Varietal, Estación, Canal), 6 tarjetas de KPIs, gráficos interactivos de Plotly (burbujas de inventario, comparativa Real vs. OLS vs. Deep Learning con filtro por varietal y curva de pérdida MSE), los 2 PNG de Matplotlib y Seaborn incrustados en Base64, tablas de Estadística Descriptiva / coeficientes OLS y un Simulador de Pronóstico de Demanda.
+  - En `main.py` se conectó el flujo completo para generar los PNG y el dashboard HTML unificado.
+  - Se fijaron las versiones exactas (`statsmodels==0.15.0`, `scipy==1.18.1`, `scikit-learn==1.9.1`, `tensorflow==2.21.0`) en `requirements.txt` y se eliminó `consignas_examen_parcial_nro_2.md:Zone.Identifier` agregando `*:Zone.Identifier` a `.gitignore`.
+- **Por qué:** cumplir con el núcleo de la consigna 1 (integrar el backend analítico al dashboard aportando funcionalidad a la visualización) y contar con filtros, KPIs, guía de estilo y simulador para la documentación del Parcial 2.
+- **Archivos:** `dataProcessing.py`, `main.py`, `visuals/matplotUtils.py`, `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `requirements.txt`, `.gitignore`, `README.md`.
+- **Resultado:** `main.py` ejecuta todo el pipeline de punta a punta sin advertencias y genera `visuals/reporte_interactivo.html` junto con las imágenes PNG actualizadas.
+- **Pendiente:** redactar el documento de entrega del Parcial 2 (con diagrama Mermaid del pipeline, diccionario de datos, glosario de KPIs, capturas señalizadas y FAQ) y exportarlo a PDF.
+
+### 10. Guía cronológica de estudio, documentación del Parcial 2 (`.md` + `.html` para PDF) y actualización de `.gitignore`
+- **Qué:**
+  - Se creó `EXPLICACION_FLUJO_PROYECTO.md` con la explicación cronológica paso a paso de todo el flujo de ejecución (`schema/` → `generadorDeDatos.py` → `main.py` → `dataProcessing.py` → `sources/` → `backend/` → `visuals/`).
+  - Se crearon `DOCUMENTACION_PARCIAL2.md` y `DOCUMENTACION_PARCIAL2.html` (listo para exportar a PDF con `Ctrl + P`) cubriendo todas las secciones de la consigna 2 (`a. Portada`, `b. Proyecto`, `c. Documentación técnica`, `d. Gobierno de datos` y `e. Guía de usuario`).
+  - Se actualizó `.gitignore` para excluir los archivos locales de examen y estudio (`consignas_examen_parcial_nro_2.md`, `analisis_estado_parcial2.md`, `EXPLICACION_FLUJO_PROYECTO.md`, `DOCUMENTACION_PARCIAL2.md`, `DOCUMENTACION_PARCIAL2.html`) del repositorio público.
+- **Por qué:** completar el 50% de Documentación exigido en la rúbrica, facilitar la defensa oral del código y mantener limpio el repositorio de GitHub.
+- **Archivos:** `.gitignore`, `CHANGELOG.md` (y archivos locales `EXPLICACION_FLUJO_PROYECTO.md`, `DOCUMENTACION_PARCIAL2.md`, `DOCUMENTACION_PARCIAL2.html`).
+- **Resultado:** proyecto 100% completo en programación y documentación, listo para sincronizar con `origin/main`.
