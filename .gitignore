@@ -10,10 +10,10 @@ __pycache__/
 *$py.class
 *.so
 
-# Datos generados automáticamente (se recrean con generadorDeDatos.py)
+# Datos generados automáticamente (se recrean solos al correr main.py, o con generadorDeDatos.py)
 data/*.csv
 
-# Reportes y salidas exportadas
+# Reportes y salidas exportadas (se regeneran al correr main.py)
 visuals/*.html
 visuals/*.png
 

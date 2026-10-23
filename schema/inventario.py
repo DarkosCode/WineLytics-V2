@@ -1,4 +1,10 @@
 class Inventario:
+    """Esquema del dataset de inventario: nombres de columnas (normalizadas, derivadas y originales del CSV).
+
+    Es la única fuente de verdad de los nombres de columna del inventario;
+    el resto del proyecto los importa desde acá en lugar de repetir los textos.
+    """
+
     #? Nombres de columnas ya normalizados (los que usa todo el proyecto)
     COL_VARIETAL = "Varietal"
     COL_LINEA = "Linea"

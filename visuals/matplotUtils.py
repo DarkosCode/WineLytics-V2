@@ -31,9 +31,8 @@ def graficarEstacionalidadVarietales(df, mostrarVentana: bool = False):
         .unstack(fill_value=0)
     )
 
-    # 2. Reordenar las columnas en orden 'cronológico' de las estaciones
-    ordenEstaciones = ['Verano', 'Otoño', 'Invierno', 'Primavera']
-    columnasExistentes = [est for est in ordenEstaciones if est in pivotDf.columns]
+    # 2. Reordenar las columnas en orden 'cronológico' de las estaciones (definido en schema/ventas.py)
+    columnasExistentes = [est for est in Ventas.ORDEN_ESTACIONES if est in pivotDf.columns]
     pivotDf = pivotDf.reindex(columns=columnasExistentes)
 
     fig, ax = plt.subplots(figsize=(10, 6), facecolor=COLOR_FONDO)

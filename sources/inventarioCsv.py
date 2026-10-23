@@ -4,9 +4,26 @@ import numpy as np
 from schema.inventario import Inventario
 
 def cargarInventario():
+    """Lee data/inventario.csv y lo devuelve limpio y enriquecido, listo para analizar.
+
+    Pasos: renombra los encabezados al esquema del proyecto (schema/inventario.py), reemplaza nulos,
+    elimina duplicados por (Varietal, Línea), descarta stock negativo y agrega la columna
+    'Reposicion Necesaria' ("SI" si el stock está por debajo del punto de reposición, "NO" si no).
+
+    Returns:
+        DataFrame de inventario limpio.
+
+    Raises:
+        FileNotFoundError: Si data/inventario.csv no existe (hay que correr sources/generadorDeDatos.py).
+    """
     #? ↘ Esto asegura q se lea siempre bien la ruta, sea donde sea que estes parado
     baseDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rutaCsv = os.path.join(baseDir, "data", "inventario.csv")
+
+    if not os.path.exists(rutaCsv):
+        raise FileNotFoundError(
+            f"No se encontró '{rutaCsv}'. Generá los datos primero con: python3 sources/generadorDeDatos.py"
+        )
     
     dfCsv = pd.read_csv(rutaCsv)
     

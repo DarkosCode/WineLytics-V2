@@ -1,10 +1,13 @@
 """
-Módulo de análisis estadístico de WineLytics.
+Módulo de análisis estadístico de WineLytics-V2.
 
-Ajusta un modelo de Regresión Lineal por Mínimos Cuadrados Ordinarios (OLS)
+Calcula estadística descriptiva y pruebas de hipótesis con ``numpy`` / ``scipy.stats``
+(media, mediana, desvío, correlación de Pearson y ANOVA por estación).
+
+Además ajusta un modelo de Regresión Lineal por Mínimos Cuadrados Ordinarios (OLS)
 con ``statsmodels`` para describir / pronosticar las 'Unidades Vendidas' en
 función del 'Precio Unitario', el 'Canal de Venta', el 'Varietal' y la
-'Estacion' del año.
+'Estacion' del año. El OLS se evalúa in-sample y en un conjunto de prueba 80/20.
 
 'Linea' se excluye a propósito: el precio depende casi por completo de la
 línea (Joven < Reserva < Gran Reserva), por lo que incluir ambas genera

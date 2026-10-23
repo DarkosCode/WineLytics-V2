@@ -1,4 +1,4 @@
-# Registro de cambios — WineLytics
+# Registro de cambios — WineLytics-V2
 
 Historial cronológico de los cambios realizados en el proyecto.
 Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectados.
@@ -151,3 +151,23 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
 - **Por qué:** completar el 50% de Documentación exigido en la rúbrica, facilitar la defensa oral del código y mantener limpio el repositorio de GitHub.
 - **Archivos:** `.gitignore`, `CHANGELOG.md` (y archivos locales `EXPLICACION_FLUJO_PROYECTO.md`, `DOCUMENTACION_PARCIAL2.md`, `DOCUMENTACION_PARCIAL2.html`).
 - **Resultado:** proyecto 100% completo en programación y documentación, listo para sincronizar con `origin/main`.
+
+---
+
+## 2026-10-23
+
+### 11. Revisión final: correcciones de bugs, documentación, dependencias y des-versionado de archivos generados
+- **Qué:**
+  - **Bug corregido (`visuals/plotlyUtils.py`):** los botones "Solo Alerta Reposición (SI)" / "Solo Stock OK (NO)" del gráfico de burbujas estaban invertidos, porque Plotly crea los trazos en el orden de aparición de los datos (`NO`, `SI`) y los botones asumían `SI`, `NO`. Ahora la visibilidad se arma según el nombre real de cada trazo.
+  - **Código muerto eliminado:** `graficarPlotlyBurbujas()` (no se usaba y sobrescribía el dashboard).
+  - **Dashboard sin listas fijas:** los selects de filtros y del simulador (varietal, estación, canal, línea con su rango de precios real) se generan desde los datos; se reemplazó el texto fijo "1,200 transacciones"; el KPI "Precisión Modelos" pasó a "R² de los Modelos"; se quitaron afirmaciones no calculadas en los títulos de los gráficos ("sin sobreajuste", "captura la interacción…") y se aclaró que la comparativa usa promedios sobre todo el histórico. El título pasó a "WineLytics-V2".
+  - **Regla de estaciones unificada:** `Ventas.obtenerEstacion()` y `Ventas.ORDEN_ESTACIONES` en `schema/ventas.py`; la usan `generadorDeDatos.py`, `ventasCsv.py`, `matplotUtils.py` y `plotlyUtils.py` (antes estaba duplicada).
+  - **Datos automáticos:** `main.py` ahora tiene `asegurarDatos()`, que genera `data/*.csv` si faltan. `cargarVentas()` / `cargarInventario()` lanzan un `FileNotFoundError` con la instrucción de qué hacer.
+  - **Documentación:** docstrings en `schema/`, `cargarVentas`, `cargarInventario`, `procesarDatos`, `main`, `generarDashboardHtml` y `_opcionesHtml`; docstring de `statsAnalysis.py` actualizado (ahora incluye estadística descriptiva); nombre `WineLytics-V2` en README, `CHANGELOG.md` y docstrings de `backend/`. Se corrigió `TienePredicciones` → `tienePredicciones` y se quitó el import sin usar de `pandas` en `seabornUtils.py`.
+  - **README reescrito** según el estado real del proyecto: título `WineLytics-V2`, requisitos (Python ≥ 3.11, internet), generación automática de datos, flujo completo, ejecución de módulos por separado, resultados de referencia, notas importantes (el dashboard necesita internet para los gráficos de Plotly por el CDN; archivos generados no versionados; se abre el navegador) y estructura completa (`backend/`, `CHANGELOG.md`, `.agents/`).
+  - **`requirements.txt`:** se eliminaron 13 paquetes sin uso (`dash`, `Flask`, `Werkzeug`, `Jinja2`, `MarkupSafe`, `itsdangerous`, `blinker`, `click`, `janus`, `retrying`, `nest-asyncio`, `importlib_metadata`, `zipp`). Se verificó que ninguno sea dependencia de lo que sí se usa (`pip check` y `pip install --dry-run` sin conflictos).
+  - **Des-versionado:** `git rm --cached` de `data/ventas.csv`, `data/inventario.csv`, `visuals/estacionalidadDeVentas.png` y `visuals/UnidadesXCanalyMes.png`; los archivos siguen en disco y ya están cubiertos por `.gitignore` (se actualizaron sus comentarios).
+- **Por qué:** cerrar la revisión final del proyecto (funcionamiento, documentación y consistencia) antes de la entrega, y evitar versionar archivos que se regeneran solos.
+- **Archivos:** `main.py`, `dataProcessing.py`, `schema/ventas.py`, `schema/inventario.py`, `sources/generadorDeDatos.py`, `sources/ventasCsv.py`, `sources/inventarioCsv.py`, `backend/statsAnalysis.py`, `backend/deepLearning.py`, `visuals/matplotUtils.py`, `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `README.md`, `requirements.txt`, `.gitignore`, `CHANGELOG.md`.
+- **Resultado:** en una copia del repo **sin CSV ni PNG**, `main.py` generó los datos, corrió todo el pipeline y produjo el dashboard sin errores. Los CSV generados son idénticos a los anteriores (mismo contenido), las métricas no cambiaron (OLS R² test 0.6739; DL R² test 0.873) y el JavaScript del dashboard es válido. Los botones de reposición ahora muestran el subconjunto correcto.
+- **Pendiente:** hacer `commit` y `push` para actualizar el repositorio remoto. Quedaron sin cambiar, a propósito: el `print(modelo.summary())` dentro del pipeline y los atributos `_scaler` / `_columnasX` que se agregan al modelo Keras.

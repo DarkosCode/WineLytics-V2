@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import webbrowser
+from html import escape
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -27,6 +28,18 @@ def _imagenABase64(rutaImagen: str) -> str:
     return f"data:image/png;base64,{codificado}"
 
 
+def _opcionesHtml(valores, textoTodos: str | None = None) -> str:
+    """Arma las etiquetas <option> de un <select> a partir de una lista de valores.
+
+    Args:
+        valores: Valores únicos a ofrecer como opciones.
+        textoTodos: Si se indica, agrega al principio la opción "TODOS" con este texto.
+    """
+    opciones = [f'<option value="TODOS">{escape(textoTodos)}</option>'] if textoTodos else []
+    opciones += [f'<option value="{escape(str(v))}">{escape(str(v))}</option>' for v in valores]
+    return "".join(opciones)
+
+
 def _aplicarEstiloPlotly(fig: go.Figure, titulo: str) -> go.Figure:
     """Aplica la guía de estilo unificada (tipografía Arial, colores de bodega y fondo limpio)."""
     fig.update_layout(
@@ -48,7 +61,7 @@ def _aplicarEstiloPlotly(fig: go.Figure, titulo: str) -> go.Figure:
 
 def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
     """Crea el gráfico de burbujas interactivo (Stock vs. Ventas + estado de reposición)."""
-    TienePredicciones = (
+    tienePredicciones = (
         Ventas.COL_PREDICCION in dfConsolidado.columns
         and Ventas.COL_PREDICCION_DL in dfConsolidado.columns
     )
@@ -60,7 +73,7 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
         Inventario.COL_REPOSICION,
         Inventario.COL_REPOSICION_NECESARIA,
     ]
-    if TienePredicciones:
+    if tienePredicciones:
         columnasCustom.extend([Ventas.COL_PREDICCION, Ventas.COL_PREDICCION_DL])
 
     fig = px.scatter(
@@ -80,7 +93,7 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
     )
 
     extraHover = ""
-    if TienePredicciones:
+    if tienePredicciones:
         extraHover = (
             "<b>Demanda Anual Est. (OLS):</b> %{customdata[5]:,.0f} u.<br>"
             "<b>Demanda Anual Est. (Red Neuronal):</b> %{customdata[6]:,.0f} u.<br>"
@@ -100,7 +113,10 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
         )
     )
 
-    #? Menú desplegable nativo de Plotly para filtrar por estado de reposición
+    #? Botones nativos de Plotly para filtrar por estado de reposición.
+    #? Plotly crea un trazo por cada valor de 'Reposicion Necesaria' en el orden en que aparece en los datos
+    #? (no siempre "SI" primero), por eso la visibilidad se arma según el nombre real de cada trazo.
+    nombresTrazos = [trazo.name for trazo in fig.data]
     fig.update_layout(
         updatemenus=[
             dict(
@@ -110,9 +126,12 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
                 y=1.15,
                 xanchor="right",
                 buttons=[
-                    dict(label="Todos los SKUs", method="update", args=[{"visible": [True, True]}]),
-                    dict(label="Solo Alerta Reposición (SI)", method="update", args=[{"visible": [True, False]}]),
-                    dict(label="Solo Stock OK (NO)", method="update", args=[{"visible": [False, True]}]),
+                    dict(label="Todos los SKUs", method="update",
+                         args=[{"visible": [True for _ in nombresTrazos]}]),
+                    dict(label="Solo Alerta Reposición (SI)", method="update",
+                         args=[{"visible": [nombre == "SI" for nombre in nombresTrazos]}]),
+                    dict(label="Solo Stock OK (NO)", method="update",
+                         args=[{"visible": [nombre == "NO" for nombre in nombresTrazos]}]),
                 ],
             )
         ]
@@ -127,7 +146,7 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
 
 def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
     """Compara las unidades medias Reales vs. Predicción OLS vs. Predicción Deep Learning por Estación y Varietal."""
-    ordenEstaciones = ["Verano", "Otoño", "Invierno", "Primavera"]
+    ordenEstaciones = Ventas.ORDEN_ESTACIONES
     varietales = ["Todos", *sorted(dfVentas[Ventas.COL_VARIETAL].unique().tolist())]
 
     fig = go.Figure()
@@ -205,8 +224,9 @@ def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
 
     return _aplicarEstiloPlotly(
         fig,
-        "<b>Desempeño Predictivo: Ventas Reales vs. OLS vs. Deep Learning</b><br>"
-        "<sup>La Red Neuronal captura la interacción Varietal × Estación (ej. Torrontés en Verano y Tintos en Invierno)</sup>",
+        "<b>Comparación de Modelos: Ventas Reales vs. OLS vs. Deep Learning</b><br>"
+        "<sup>Promedios sobre todo el histórico (la métrica fuera de muestra está en los KPIs y el simulador). "
+        "Observá cómo cada modelo sigue el efecto de la estación en cada varietal</sup>",
     )
 
 
@@ -242,7 +262,7 @@ def crearGraficoCurvaAprendizaje(historyDict: dict) -> go.Figure:
     return _aplicarEstiloPlotly(
         fig,
         "<b>Curva de Aprendizaje — Red Neuronal (Keras Dense 32→16→1)</b><br>"
-        "<sup>Convergencia de la función de pérdida (MSE) sin sobreajuste (overfitting)</sup>",
+        "<sup>Evolución de la función de pérdida (MSE) en entrenamiento y validación a lo largo de las épocas</sup>",
     )
 
 
@@ -252,7 +272,25 @@ def generarDashboardHtml(
     rutaBarrasPng: str | None = None,
     abrirNavegador: bool = True,
 ) -> str:
-    """Construye el Dashboard HTML único e interactivo con KPIs, filtros, visualizaciones y modelos."""
+    """Construye y guarda el Dashboard HTML único e interactivo (`visuals/reporte_interactivo.html`).
+
+    Incluye: barra de filtros, tarjetas de KPIs, gráficos de Plotly (burbujas de inventario, comparativa
+    Real vs. OLS vs. Deep Learning y curva de aprendizaje), los PNG de Matplotlib y Seaborn incrustados
+    en Base64, las tablas de estadística descriptiva / OLS y el simulador de demanda.
+
+    Nota: el JavaScript de Plotly se carga desde su CDN oficial, así que la página necesita conexión a
+    internet para dibujar los gráficos interactivos. El resto del contenido (KPIs, tablas, imágenes,
+    filtros y simulador) está incrustado en el propio archivo.
+
+    Args:
+        datos: Diccionario devuelto por ``dataProcessing.procesarDatos()``.
+        rutaHeatmapPng: Ruta del PNG del mapa de calor (Matplotlib) a incrustar.
+        rutaBarrasPng: Ruta del PNG del gráfico de barras (Seaborn) a incrustar.
+        abrirNavegador: Si es True, abre el HTML generado en el navegador predeterminado.
+
+    Returns:
+        Ruta absoluta del archivo HTML generado.
+    """
     dfVentas: pd.DataFrame = datos["ventas"]
     dfInventario: pd.DataFrame = datos["inventario"]
     dfConsolidado: pd.DataFrame = datos["consolidado"]
@@ -262,6 +300,8 @@ def generarDashboardHtml(
     desc: dict = metricasOls["descriptiva"]
 
     #? 1. Figuras interactivas de Plotly exportadas como fragmentos HTML
+    #? Plotly.js se carga una sola vez desde el CDN (include_plotlyjs="cdn"): mantiene el HTML liviano
+    #? pero requiere internet para ver los gráficos interactivos (ver README).
     figBurbujas = crearGraficoBurbujas(dfConsolidado)
     figComparativa = crearGraficoComparativaModelos(dfVentas)
     figCurva = crearGraficoCurvaAprendizaje(datosDl["history"])
@@ -270,11 +310,28 @@ def generarDashboardHtml(
     htmlComparativa = figComparativa.to_html(full_html=False, include_plotlyjs=False)
     htmlCurva = figCurva.to_html(full_html=False, include_plotlyjs=False)
 
-    #? 2. Imágenes estáticas de Matplotlib y Seaborn en Base64 para que el HTML sea autocontenido
+    #? 2. Imágenes estáticas de Matplotlib y Seaborn en Base64 (viajan dentro del propio HTML)
     b64Heatmap = _imagenABase64(rutaHeatmapPng) if rutaHeatmapPng else ""
     b64Barras = _imagenABase64(rutaBarrasPng) if rutaBarrasPng else ""
 
-    #? 3. Precalcular agregados por filtro (Varietal, Estación, Canal) para el filtro interactivo de KPIs y Simulador
+    #? 3. Opciones de los filtros y del simulador, generadas desde los datos (sin listas escritas a mano)
+    varietales = sorted(dfVentas[Ventas.COL_VARIETAL].unique())
+    estaciones = [e for e in Ventas.ORDEN_ESTACIONES if e in set(dfVentas[Ventas.COL_ESTACION])]
+    canales = sorted(dfVentas[Ventas.COL_CANAL].unique())
+    #? Líneas ordenadas por precio medio (Joven < Reserva < Gran Reserva), con su rango de precios real
+    preciosPorLinea = dfVentas.groupby(Ventas.COL_LINEA)[Ventas.COL_PRECIOU].agg(["mean", "min", "max"]).sort_values("mean")
+    opcionesLineaSim = "".join(
+        f'<option value="{escape(str(lin))}">{escape(str(lin))} (${fila["min"]:.0f} - ${fila["max"]:.0f} USD)</option>'
+        for lin, fila in preciosPorLinea.iterrows()
+    )
+    opcionesVarietalFiltro = _opcionesHtml(varietales, "Todos los Varietales")
+    opcionesEstacionFiltro = _opcionesHtml(estaciones, "Todas las Estaciones")
+    opcionesCanalFiltro = _opcionesHtml(canales, "Todos los Canales")
+    opcionesVarietalSim = _opcionesHtml(varietales)
+    opcionesEstacionSim = _opcionesHtml(estaciones)
+    opcionesCanalSim = _opcionesHtml(canales)
+
+    #? 4. Registros por transacción para los filtros de KPIs y el simulador (se calculan en el navegador)
     registrosJson = []
     for _, fila in dfVentas.iterrows():
         registrosJson.append(
@@ -318,7 +375,7 @@ def generarDashboardHtml(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WineLytics — Dashboard Analítico de Bodega</title>
+    <title>WineLytics-V2 — Dashboard Analítico de Bodega</title>
     <style>
         :root {{
             --bordo: {COLOR_BORDO};
@@ -476,7 +533,7 @@ def generarDashboardHtml(
 <body>
     <header>
         <div>
-            <h1>🍷 WineLytics — Dashboard Analítico de Bodega</h1>
+            <h1>🍷 WineLytics-V2 — Dashboard Analítico de Bodega</h1>
             <p>Sistema Integrado de ETL, Visualización, Estadística Inferencial (OLS / SciPy) y Deep Learning (Keras / TensorFlow)</p>
         </div>
         <div class="badge-header">
@@ -490,29 +547,19 @@ def generarDashboardHtml(
             <div class="grupo-filtro">
                 <label for="filtroVarietal">Filtrar por Varietal</label>
                 <select id="filtroVarietal" onchange="actualizarKPIs()">
-                    <option value="TODOS">Todos los Varietales</option>
-                    <option value="Malbec">Malbec</option>
-                    <option value="Cabernet Sauvignon">Cabernet Sauvignon</option>
-                    <option value="Tempranillo">Tempranillo</option>
-                    <option value="Torrontés">Torrontés</option>
+                    {opcionesVarietalFiltro}
                 </select>
             </div>
             <div class="grupo-filtro">
                 <label for="filtroEstacion">Filtrar por Estación</label>
                 <select id="filtroEstacion" onchange="actualizarKPIs()">
-                    <option value="TODOS">Todas las Estaciones</option>
-                    <option value="Verano">Verano</option>
-                    <option value="Otoño">Otoño</option>
-                    <option value="Invierno">Invierno</option>
-                    <option value="Primavera">Primavera</option>
+                    {opcionesEstacionFiltro}
                 </select>
             </div>
             <div class="grupo-filtro">
                 <label for="filtroCanal">Filtrar por Canal de Venta</label>
                 <select id="filtroCanal" onchange="actualizarKPIs()">
-                    <option value="TODOS">Todos los Canales</option>
-                    <option value="Mercado Interno">Mercado Interno</option>
-                    <option value="Exportación">Exportación</option>
+                    {opcionesCanalFiltro}
                 </select>
             </div>
             <button class="btn-reset" onclick="resetearFiltros()">Restablecer Filtros</button>
@@ -523,7 +570,7 @@ def generarDashboardHtml(
             <div class="tarjeta-kpi">
                 <div class="kpi-titulo">Ingreso Total</div>
                 <div class="kpi-valor" id="kpiIngreso">$0</div>
-                <div class="kpi-sub" id="kpiTransacciones">1,200 transacciones</div>
+                <div class="kpi-sub" id="kpiTransacciones">Cargando transacciones…</div>
             </div>
             <div class="tarjeta-kpi">
                 <div class="kpi-titulo">Unidades Vendidas</div>
@@ -546,7 +593,7 @@ def generarDashboardHtml(
                 <div class="kpi-sub">Vinos bajo punto de reposición</div>
             </div>
             <div class="tarjeta-kpi dorado">
-                <div class="kpi-titulo">Precisión Modelos (Test 20%)</div>
+                <div class="kpi-titulo">R² de los Modelos (Test 20%)</div>
                 <div class="kpi-valor">DL {metricasDl['r2']*100:.1f}% vs OLS {metricasOls['r2Test']*100:.1f}%</div>
                 <div class="kpi-sub">R² en conjunto de prueba (semilla 42)</div>
             </div>
@@ -642,34 +689,25 @@ def generarDashboardHtml(
                 <div class="grupo-filtro">
                     <label for="simVarietal">Varietal</label>
                     <select id="simVarietal" onchange="actualizarSimulador()">
-                        <option value="Malbec">Malbec</option>
-                        <option value="Torrontés">Torrontés</option>
-                        <option value="Cabernet Sauvignon">Cabernet Sauvignon</option>
-                        <option value="Tempranillo">Tempranillo</option>
+                        {opcionesVarietalSim}
                     </select>
                 </div>
                 <div class="grupo-filtro">
                     <label for="simEstacion">Estación</label>
                     <select id="simEstacion" onchange="actualizarSimulador()">
-                        <option value="Invierno">Invierno</option>
-                        <option value="Verano">Verano</option>
-                        <option value="Otoño">Otoño</option>
-                        <option value="Primavera">Primavera</option>
+                        {opcionesEstacionSim}
                     </select>
                 </div>
                 <div class="grupo-filtro">
                     <label for="simLinea">Línea (define rango de precio)</label>
                     <select id="simLinea" onchange="actualizarSimulador()">
-                        <option value="Joven">Joven (~$8 - $12 USD)</option>
-                        <option value="Reserva">Reserva (~$15 - $22 USD)</option>
-                        <option value="Gran Reserva">Gran Reserva (~$30 - $45 USD)</option>
+                        {opcionesLineaSim}
                     </select>
                 </div>
                 <div class="grupo-filtro">
                     <label for="simCanal">Canal de Venta</label>
                     <select id="simCanal" onchange="actualizarSimulador()">
-                        <option value="Mercado Interno">Mercado Interno</option>
-                        <option value="Exportación">Exportación</option>
+                        {opcionesCanalSim}
                     </select>
                 </div>
             </div>
@@ -795,22 +833,3 @@ def generarDashboardHtml(
 
     return rutaHtml
 
-
-def graficarPlotlyBurbujas(dfConsolidado: pd.DataFrame, abrirNavegador: bool = True):
-    """Mantiene compatibilidad directa: genera el gráfico de burbujas en visuals/reporte_interactivo.html."""
-    if dfConsolidado is None or dfConsolidado.empty:
-        print("El DataFrame consolidado está vacío o no existe.")
-        return None
-
-    fig = crearGraficoBurbujas(dfConsolidado)
-    baseDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    rutaHtml = os.path.join(baseDir, "visuals", "reporte_interactivo.html")
-    fig.write_html(rutaHtml)
-    print(f"Reporte interactivo guardado exitosamente en: {rutaHtml}")
-
-    if abrirNavegador:
-        try:
-            fig.show()
-        except Exception:
-            webbrowser.open(f"file://{os.path.abspath(rutaHtml)}")
-    return rutaHtml

@@ -1,5 +1,5 @@
 """
-Módulo de Aprendizaje Profundo (Deep Learning) de WineLytics.
+Módulo de Aprendizaje Profundo (Deep Learning) de WineLytics-V2.
 
 Entrena una red neuronal densa (Keras / TensorFlow) para estimar las
 'Unidades Vendidas' a partir del 'Precio Unitario', el 'Canal de Venta',

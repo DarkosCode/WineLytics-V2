@@ -7,6 +7,20 @@ from backend.deepLearning import entrenarModeloDeepLearning, agregarPredicciones
 
 
 def procesarDatos():
+    """Ejecuta el pipeline de datos completo: ETL, análisis estadístico y Deep Learning.
+
+    Carga y limpia los CSV (`sources/`), ajusta el modelo OLS y la red neuronal (`backend/`),
+    agrega sus predicciones al DataFrame de ventas y lo cruza con el inventario.
+
+    Returns:
+        Diccionario con:
+            - ``inventario``: DataFrame de inventario limpio.
+            - ``ventas``: DataFrame de ventas con ``Prediccion_Ventas`` y ``Prediccion_DL``.
+            - ``consolidado``: inventario + ventas/predicciones agrupadas por Varietal y Línea.
+            - ``estadistica``: métricas del OLS y estadística descriptiva.
+            - ``deepLearning``: métricas, historial de entrenamiento, valores de test y modelo de la red.
+            - ``modeloOls``: modelo OLS ajustado (``statsmodels``).
+    """
     #? 1. Cargar los DataFrames desde los CSV pasando por los módulos de limpieza y estructuración (sources/)
     dfInventario = cargarInventario()
     dfVentas = cargarVentas()

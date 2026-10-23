@@ -30,29 +30,13 @@ canales = ['Mercado Interno', 'Exportación'] #? Canales de venta, impacto en el
 #? Ej: un Joven local (~8 USD) espera ~222 botellas, un Gran Reserva de exportación (~45 USD) ~92
 UNIDADES_BASE = 250.0
 PENDIENTE_PRECIO = 3.5
-#? Multiplicadores estacionales (misma definición de estaciones que sources.ventasCsv.py)
+#? Multiplicadores estacionales (misma definición de estaciones que schema/ventas.py -> Ventas.obtenerEstacion)
 FACTOR_TINTOS_INVIERNO = 1.5   # Malbec y Cabernet Sauvignon en Invierno
 FACTOR_TORRONTES_VERANO = 1.6  # Torrontés en Verano
 #? Ruido gaussiano para que los datos no sean perfectamente deterministas
 DESVIO_RUIDO = 20.0
 #? Piso de unidades por transacción (siempre enteros positivos)
 UNIDADES_MINIMAS = 20
-
-
-def obtenerEstacion(mes: int) -> str:
-    """Devuelve la estación (hemisferio sur) para un número de mes.
-
-    Usa exactamente la misma regla que `cargarVentas()` en sources.ventasCsv.py,
-    para que el efecto estacional generado coincida con la columna 'Estacion'.
-    """
-    if mes in [12, 1, 2]:
-        return 'Verano'
-    elif mes in [3, 4, 5]:
-        return 'Otoño'
-    elif mes in [6, 7, 8]:
-        return 'Invierno'
-    else:
-        return 'Primavera'
 
 
 def calcularPrecioUnitario(lin: str, canal: str) -> float:
@@ -139,7 +123,8 @@ def generarVentas(nVentas: int = 1200) -> pd.DataFrame:
 
         #? Primero el precio, porque las unidades dependen de él
         precioUnitario = calcularPrecioUnitario(lin, canal)
-        estacion = obtenerEstacion(fecha.month)
+        #? Misma regla de estaciones que usa cargarVentas(), definida una sola vez en schema/ventas.py
+        estacion = Ventas.obtenerEstacion(fecha.month)
         unidadesVendidas = calcularUnidadesVendidas(precioUnitario, var, estacion)
 
         ventasList.append({
@@ -178,7 +163,7 @@ def main() -> None:
     ventasPath = os.path.join(DATA_DIR, 'ventas.csv')
     dfVentas.to_csv(ventasPath, index=False)
     print(f"✅ Archivo '{ventasPath}' creado con éxito.")
-    print("\n🎉 ¡Listo! Datos sintéticos generados en la raíz del proyecto.")
+    print("\n🎉 ¡Listo! Datos sintéticos generados en la carpeta data/ del proyecto.")
 
 
 if __name__ == "__main__":
