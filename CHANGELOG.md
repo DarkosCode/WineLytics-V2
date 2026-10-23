@@ -171,3 +171,9 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
 - **Archivos:** `main.py`, `dataProcessing.py`, `schema/ventas.py`, `schema/inventario.py`, `sources/generadorDeDatos.py`, `sources/ventasCsv.py`, `sources/inventarioCsv.py`, `backend/statsAnalysis.py`, `backend/deepLearning.py`, `visuals/matplotUtils.py`, `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `README.md`, `requirements.txt`, `.gitignore`, `CHANGELOG.md`.
 - **Resultado:** en una copia del repo **sin CSV ni PNG**, `main.py` generó los datos, corrió todo el pipeline y produjo el dashboard sin errores. Los CSV generados son idénticos a los anteriores (mismo contenido), las métricas no cambiaron (OLS R² test 0.6739; DL R² test 0.873) y el JavaScript del dashboard es válido. Los botones de reposición ahora muestran el subconjunto correcto.
 - **Pendiente:** hacer `commit` y `push` para actualizar el repositorio remoto. Quedaron sin cambiar, a propósito: el `print(modelo.summary())` dentro del pipeline y los atributos `_scaler` / `_columnasX` que se agregan al modelo Keras.
+
+### 12. Integración de ramas (`main` local y `origin/main`) y documento PDF de entrega
+- **Qué:** se integró el historial divergente entre `main` local (commit con `ParcialN°2_FrancoCiccarelli_2do4ta.pdf`) y `origin/main` (commit de revisiones finales) mediante `git pull --rebase origin main`.
+- **Por qué:** unificar los cambios finales de código/documentación con el archivo PDF de entrega del Parcial N°2 sin perder commits ni generar conflictos.
+- **Archivos:** `ParcialN°2_FrancoCiccarelli_2do4ta.pdf`, `CHANGELOG.md`.
+- **Resultado:** historial lineal y sincronizado con `origin/main`.
