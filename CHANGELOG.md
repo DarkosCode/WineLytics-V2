@@ -199,3 +199,9 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
 - **Por qué:** lograr que tanto el código como el PDF de entrega tengan una lectura natural y coherente con la entrega del Primer Parcial, cumpliendo todos los puntos exigidos en el Parcial 2.
 - **Archivos:** `main.py`, `dataProcessing.py`, `schema/inventario.py`, `schema/ventas.py`, `sources/generadorDeDatos.py`, `sources/inventarioCsv.py`, `sources/ventasCsv.py`, `backend/statsAnalysis.py`, `backend/deepLearning.py`, `visuals/matplotUtils.py`, `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `README.md`, `ParcialN°2_FrancoCiccarelli_2do4ta.pdf`, `.gitignore`, `CHANGELOG.md`.
 - **Resultado:** el pipeline completo corre sin errores ni advertencias y el nuevo PDF de 17 páginas queda limpio y listo para presentar.
+
+### 15. Des-versionado de la carpeta `.agents/`
+- **Qué:** se quitó la carpeta `.agents/` del seguimiento de Git (`git rm -r --cached .agents`) y se agregó `.agents/` a `.gitignore`.
+- **Por qué:** mantener el repositorio público de GitHub limpio solo con los archivos propios del proyecto.
+- **Archivos:** `.gitignore`, `CHANGELOG.md`.
+- **Resultado:** `.agents/` eliminado del repositorio remoto pero conservado localmente.
