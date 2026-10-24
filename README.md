@@ -1,17 +1,19 @@
 # WineLytics-V2 - Sistema de Análisis de Bodega
 
-**WineLytics-V2** es una herramienta desarrollada en Python (nombre ficticio) para el procesamiento de datos (ETL), el análisis estadístico, el aprendizaje profundo y la visualización del rendimiento comercial e inventario de una bodega.
-
-Permite analizar la popularidad de los vinos, la estacionalidad de las ventas, los canales de distribución, pronosticar la demanda (regresión OLS vs. red neuronal) y alertar sobre la necesidad de reposición de stock. El resultado final es un **dashboard HTML interactivo** (`visuals/reporte_interactivo.html`).
+"WineLytics-V2" es el nombre ficticio del proyecto, el cual es una herramienta desarrollada en Python para el procesamiento de datos (ETL), el análisis estadístico, el aprendizaje profundo y la visualización del rendimiento comercial e inventario de una bodega.
+Permite analizar la popularidad de los vinos, la estacionalidad de las ventas, los canales de distribución, pronosticar la demanda (comparando regresión lineal OLS contra una Red Neuronal) y alertar sobre la necesidad de reposición de stock en un **dashboard HTML interactivo** (`visuals/reporte_interactivo.html`).
 
 ## 🛠️ Requisitos Previos
 
-- **Python 3.11 o superior** (requerido por las versiones de `pandas` y `numpy` de `requirements.txt`). El proyecto fue probado con Python 3.12.
+Tener instalado:
+
+- **Python 3.11 o superior** (requerido por las versiones de `pandas` y `numpy` de `requirements.txt`).
 - **pip** (administrador de paquetes de Python).
-- **Conexión a internet** al instalar las dependencias y, luego, para ver los gráficos interactivos de Plotly del dashboard (ver [Notas importantes](#-notas-importantes)).
-- Espacio en disco: `tensorflow` es una dependencia pesada (varios cientos de MB).
+- **Conexión a internet** para instalar los paquetes y para cargar la librería interactiva de Plotly desde su CDN al abrir el dashboard.
 
 ## 🚀 Guía de Instalación y Uso Paso a Paso
+
+Seguir estos pasos sencillos para clonar, configurar y ejecutar el proyecto en tu máquina local:
 
 ### Paso 1: Clonar el repositorio
 
@@ -39,72 +41,51 @@ Para mantener limpias tus librerías y evitar conflictos, crea y activa un entor
 
 ### Paso 3: Instalar las dependencias
 
-Instala todas las librerías necesarias del proyecto utilizando el archivo `requirements.txt` (puede tardar unos minutos por `tensorflow`):
+Instala todas las librerías necesarias del proyecto utilizando el archivo `requirements.txt`:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Paso 4: Ejecutar el proyecto
+### Paso 4: Generar los datos de prueba (Opcional)
 
-Para correr toda la suite (datos, modelos, gráficos y dashboard), ejecuta el archivo orquestador:
+El sistema utiliza archivos CSV simulados (`data/ventas.csv` y `data/inventario.csv`) con semilla fija (`42`) para que siempre se generen los mismos datos. Si no existen en la carpeta `data/`, `main.py` los crea automáticamente, pero también puedes generarlos manualmente corriendo:
+
+```bash
+python3 sources/generadorDeDatos.py
+```
+
+- **¿Qué hace esto?** Crea la carpeta `data/` en la raíz del proyecto y genera `inventario.csv` (stock actual de los 12 vinos) y `ventas.csv` (historial de 1200 transacciones de venta del año 2025).
+
+### Paso 5: Ejecutar el análisis y el dashboard
+
+Para correr todo el flujo de procesamiento, modelos y reportes, ejecuta el archivo orquestador:
 
 ```bash
 python3 main.py
 ```
 
-> **Primera ejecución:** los archivos `data/ventas.csv` e `data/inventario.csv` **no vienen en el repositorio** (son datos sintéticos que se generan). Si no existen, `main.py` los crea automáticamente. Al usar una semilla fija (42), siempre se generan **exactamente los mismos datos**.
->
-> Si prefieres generarlos a mano (o regenerarlos), ejecuta `python3 sources/generadorDeDatos.py`. Esto crea la carpeta `data/` con `inventario.csv` (stock actual) y `ventas.csv` (1200 transacciones de venta de 2025).
-
 - **Flujo del programa al ejecutar `main.py`:**
-  0. **Datos:** si faltan los CSV de `data/`, se generan con `sources/generadorDeDatos.py`.
-  1. **Procesamiento (ETL) + Modelos Analíticos (`dataProcessing.py`):**
-     - Lee, limpia y transforma `ventas.csv` e `inventario.csv` (nulos, duplicados, rangos válidos, meses en español, estaciones, ingresos y alerta de reposición).
-     - Ejecuta `backend/statsAnalysis.py`: estadística descriptiva con `numpy`/`scipy` (media, mediana, desvío, correlación de Pearson y ANOVA por estación) y regresión OLS con `statsmodels`, agregando `Prediccion_Ventas`. Imprime en consola el resumen completo del modelo.
-     - Ejecuta `backend/deepLearning.py`: red neuronal `Dense 32 → 16 → 1` con `Keras`/`TensorFlow`, agregando `Prediccion_DL`. Ambos modelos se evalúan sobre el mismo conjunto de prueba (80/20, semilla 42).
-     - Consolida inventario, ventas reales y pronósticos por Varietal y Línea.
-  2. **Gráficos estáticos (`Matplotlib` y `Seaborn`):** guarda automáticamente `visuals/estacionalidadDeVentas.png` (mapa de calor de unidades por varietal y estación) y `visuals/UnidadesXCanalyMes.png` (barras de ventas mensuales por canal), sin abrir ventanas emergentes.
-  3. **Dashboard HTML (`visuals/reporte_interactivo.html`):** genera y abre en el navegador un único dashboard con: **barra de filtros interactivos** (varietal, estación y canal), **tarjetas de KPIs**, **gráficos interactivos de Plotly** (inventario vs. ventas con filtro de alerta de reposición, comparativa Real vs. OLS vs. Deep Learning y curva de aprendizaje MSE), los **gráficos de Matplotlib y Seaborn incrustados en Base64**, las tablas de **Estadística Descriptiva / OLS** y un **Simulador de Demanda por Transacción**.
-
-### Ejecución de módulos por separado (opcional)
-
-```bash
-python3 sources/generadorDeDatos.py   # genera/regenera data/*.csv
-python3 backend/statsAnalysis.py      # estadística descriptiva + OLS (imprime métricas)
-python3 backend/deepLearning.py       # entrena la red neuronal (imprime métricas)
-```
-
-### Resultados de referencia (datos con semilla 42)
-
-| Modelo | R² (test 20%) | MAE | RMSE |
-|---|---|---|---|
-| Regresión OLS (`statsmodels`) | 0.674 | 27.62 u. | 34.97 u. |
-| Red neuronal (`Keras`) | 0.873 | 17.27 u. | 21.79 u. |
-
-La red neuronal supera al OLS porque capta la interacción Varietal × Estación (p. ej. Torrontés en verano, tintos en invierno), que el modelo lineal no incluye.
+  1. **Verificación de datos (`asegurarDatos`):** Si todavía no están creados los CSV en `data/`, los genera automáticamente.
+  2. **Procesamiento (ETL) y Modelos (`dataProcessing.py`):**
+     - Lee, limpia y estructura `ventas.csv` e `inventario.csv` (nulos, duplicados, rangos válidos, ingresos, meses en español, estaciones y alerta de reposición).
+     - Ejecuta `backend/statsAnalysis.py`: calcula estadística descriptiva con `numpy` y `scipy` (media, mediana, desvío, correlación de Pearson y ANOVA por estación) y ajusta una regresión lineal múltiple OLS con `statsmodels`, sumando la columna `Prediccion_Ventas`.
+     - Ejecuta `backend/deepLearning.py`: entrena una red neuronal densa (`Dense 32 → 16 → 1`) con `Keras / TensorFlow` y `scikit-learn`, sumando la columna `Prediccion_DL`.
+     - Agrupa y cruza (`merge inner`) las ventas con el stock físico.
+  3. **Gráficos de Matplotlib y Seaborn:** Genera y guarda en disco `visuals/estacionalidadDeVentas.png` (mapa de calor por varietal y estación) y `visuals/UnidadesXCanalyMes.png` (barras de ventas mensuales por canal).
+  4. **Dashboard Interactivo (`visuals/reporte_interactivo.html`):** Arma un único reporte HTML que reúne la barra de filtros interactivos, las 6 tarjetas de KPIs, los gráficos interactivos de Plotly, los dos gráficos de Matplotlib y Seaborn incrustados, las tablas estadísticas y un Simulador de Pronóstico de Demanda, abriéndolo en el navegador.
 
 ---
 
-## ⚠️ Notas importantes
-
-- **El dashboard necesita internet para los gráficos de Plotly.** El archivo HTML carga la librería JavaScript de Plotly desde su CDN oficial. Sin conexión, los gráficos interactivos no se dibujan. Todo lo demás (KPIs, tablas, imágenes de Matplotlib/Seaborn, filtros y simulador) está incrustado en el propio archivo y funciona sin internet.
-- **Archivos generados (no versionados):** `data/*.csv`, `visuals/*.png` y `visuals/reporte_interactivo.html` están en `.gitignore`: se vuelven a crear cada vez que se ejecuta el proyecto.
-- **Se abre el navegador automáticamente** al final de `main.py`. Si estás en un servidor sin interfaz gráfica, abre manualmente el archivo `visuals/reporte_interactivo.html`.
-- **TensorFlow** puede imprimir mensajes informativos (oneDNN / CUDA) en la consola; no son errores. El proyecto no requiere GPU.
-- La ejecución completa tarda entre 30 y 60 segundos, principalmente por el entrenamiento de la red neuronal.
-
 ## 📁 Estructura del Proyecto
 
-- **`data/`:** Datos de origen (`ventas.csv` e `inventario.csv`). _Se generan al ejecutar el proyecto; no están en el repositorio_.
-- **`schema/`:** Define las constantes de columnas (`Ventas`, `Inventario`) y la regla de estaciones del año, para evitar errores de nombres y duplicación de lógica.
-- **`sources/`:** Módulos que leen, limpian (nulos, duplicados, validación de rangos) y enriquecen los datos de entrada (ingresos, meses en español y estaciones) — `ventasCsv.py` e `inventarioCsv.py` — además del generador de datos sintéticos (`generadorDeDatos.py`).
-- **`backend/`:** Análisis estadístico y modelos predictivos integrados al flujo principal:
-  - `statsAnalysis.py`: estadística descriptiva y pruebas de hipótesis (`numpy` / `scipy.stats`) y regresión lineal OLS (`statsmodels`) evaluada in-sample y en el conjunto de prueba (80/20).
-  - `deepLearning.py`: red neuronal (`Keras` / `TensorFlow`, `Dense 32 → 16 → 1`) que estima las unidades vendidas, con métricas (`R²`, `MAE`, `RMSE`) sobre el mismo conjunto de prueba, y `agregarPrediccionesDL()` para generar `Prediccion_DL`.
-- **`visuals/`:** Módulos de visualización con paleta temática "Bodega / Vino" (`matplotUtils.py`, `seabornUtils.py`, `plotlyUtils.py`) y sus salidas (`estacionalidadDeVentas.png`, `UnidadesXCanalyMes.png` y el dashboard `reporte_interactivo.html`).
-- **`dataProcessing.py`:** Módulo ETL y analítico principal: ejecuta la limpieza, los modelos de `backend/` y la consolidación de datos.
-- **`main.py`:** Orquestador principal: asegura los datos, ejecuta todo el pipeline y construye el dashboard interactivo.
-- **`requirements.txt`:** Dependencias del proyecto (versiones fijadas).
+- **`data/`:** Contiene los archivos de origen de datos generados (`ventas.csv` e `inventario.csv`). _Se crea dinámicamente al ejecutar el proyecto_.
+- **`schema/`:** Define las constantes de columnas (`inventario.py` y `ventas.py`) y la función `obtenerEstacion()` para evitar errores de nombres y no repetir código.
+- **`sources/`:** Módulos encargados de leer, limpiar y enriquecer los datos de entrada (`ventasCsv.py` e `inventarioCsv.py`), además del generador de datos sintéticos (`generadorDeDatos.py`).
+- **`backend/`:** Análisis estadístico y modelos predictivos:
+  - `statsAnalysis.py`: estadística descriptiva (`numpy` / `scipy.stats`) y regresión lineal OLS (`statsmodels`).
+  - `deepLearning.py`: red neuronal densa (`Keras / TensorFlow` y `scikit-learn`) para predecir las unidades vendidas.
+- **`visuals/`:** Contiene los archivos generadores de gráficos (`matplotUtils.py`, `seabornUtils.py`, `plotlyUtils.py`). Aquí también se guardan los PNG y el reporte interactivo HTML.
+- **`dataProcessing.py`:** Módulo ETL principal que procesa los CSV, ejecuta los modelos del backend y consolida la información.
+- **`main.py`:** Orquestador principal del proyecto.
 - **`CHANGELOG.md`:** Registro cronológico de los cambios realizados en el proyecto.
-- **`.agents/`:** Reglas del proyecto para asistentes de IA (`AGENTS.md`).

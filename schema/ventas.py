@@ -1,10 +1,4 @@
 class Ventas:
-    """Esquema del dataset de ventas: nombres de columnas y reglas de negocio compartidas.
-
-    Es la única fuente de verdad de los nombres de columna del histórico de ventas;
-    el resto del proyecto los importa desde acá en lugar de repetir los textos.
-    """
-
     #? Nombres de columnas ya normalizados (los que usa todo el proyecto)
     COL_FECHA = "Fecha"
     COL_VARIETAL = "Varietal"
@@ -14,7 +8,7 @@ class Ventas:
     COL_PRECIOU = "Precio Unitario"
     COL_ESTACION = "Estacion"
 
-    #? Columnas derivadas (se calculan en sources/ventasCsv.py y backend/)
+    #? Columnas derivadas (se calculan en sources/ventasCsv.py y en backend/)
     COL_INGRESO = "Ingreso Total"
     COL_MES = "Mes"
     COL_PREDICCION = "Prediccion_Ventas"
@@ -28,21 +22,17 @@ class Ventas:
     CSV_UNIDADESV = "Unidades_Vendidas"
     CSV_PRECIOU = "Precio_Unitario"
 
-    #? Estaciones en orden 'cronológico' (hemisferio sur), usado al ordenar ejes y filtros de los gráficos
+    #? Orden cronológico de las estaciones en Argentina para los gráficos
     ORDEN_ESTACIONES = ["Verano", "Otoño", "Invierno", "Primavera"]
 
     @staticmethod
-    def obtenerEstacion(mes: int) -> str:
-        """Devuelve la estación del año (Argentina / hemisferio sur) para un número de mes (1-12).
-
-        Es la única definición de estaciones del proyecto: la usan tanto el generador de datos
-        como la carga de ventas, para que el efecto estacional generado coincida con la columna 'Estacion'.
-        """
+    def obtenerEstacion(mes):
+        #? Devuelve la estación según el mes (teniendo en cuenta el hemisferio sur)
         if mes in [12, 1, 2]:
-            return 'Verano'
+            return "Verano"
         elif mes in [3, 4, 5]:
-            return 'Otoño'
+            return "Otoño"
         elif mes in [6, 7, 8]:
-            return 'Invierno'
+            return "Invierno"
         else:
-            return 'Primavera'
+            return "Primavera"

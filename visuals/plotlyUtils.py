@@ -2,14 +2,12 @@ import base64
 import json
 import os
 import webbrowser
-from html import escape
-import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from schema.inventario import Inventario
 from schema.ventas import Ventas
 
-#? Paleta unificada "Bodega / Vino" (Guía de estilo del proyecto)
+#? Colores de la guía de estilo del proyecto ("Bodega / Vino")
 COLOR_BORDO = "#722F37"
 COLOR_CARMIN = "#A4133C"
 COLOR_DORADO = "#C59B27"
@@ -19,8 +17,8 @@ COLOR_TEXTO = "#2C3E50"
 COLOR_FONDO = "#FAF7F5"
 
 
-def _imagenABase64(rutaImagen: str) -> str:
-    """Convierte una imagen PNG local a string base64 para incrustarla en el HTML."""
+def imagenABase64(rutaImagen):
+    #? Pasa un archivo PNG a texto base64 para poder meter la imagen adentro del HTML
     if not rutaImagen or not os.path.exists(rutaImagen):
         return ""
     with open(rutaImagen, "rb") as archivo:
@@ -28,53 +26,46 @@ def _imagenABase64(rutaImagen: str) -> str:
     return f"data:image/png;base64,{codificado}"
 
 
-def _opcionesHtml(valores, textoTodos: str | None = None) -> str:
-    """Arma las etiquetas <option> de un <select> a partir de una lista de valores.
-
-    Args:
-        valores: Valores únicos a ofrecer como opciones.
-        textoTodos: Si se indica, agrega al principio la opción "TODOS" con este texto.
-    """
-    opciones = [f'<option value="TODOS">{escape(textoTodos)}</option>'] if textoTodos else []
-    opciones += [f'<option value="{escape(str(v))}">{escape(str(v))}</option>' for v in valores]
+def armarOpcionesSelect(valores, textoTodos=None):
+    #? Arma los <option> para los desplegables del HTML
+    opciones = []
+    if textoTodos:
+        opciones.append(f'<option value="TODOS">{textoTodos}</option>')
+    for v in valores:
+        opciones.append(f'<option value="{v}">{v}</option>')
     return "".join(opciones)
 
 
-def _aplicarEstiloPlotly(fig: go.Figure, titulo: str) -> go.Figure:
-    """Aplica la guía de estilo unificada (tipografía Arial, colores de bodega y fondo limpio)."""
+def aplicarEstiloPlotly(fig, titulo):
+    #? Estilo general para que todos los gráficos de Plotly queden con la misma fuente y colores
     fig.update_layout(
-        title=dict(text=titulo, font=dict(size=17, family="Arial, sans-serif", color=COLOR_BORDO)),
+        title=dict(text=titulo, font=dict(size=15, family="Arial, sans-serif", color=COLOR_BORDO)),
         font=dict(family="Arial, sans-serif", color=COLOR_TEXTO),
         legend=dict(
             bgcolor="rgba(255, 255, 255, 0.9)",
             bordercolor="#DCD6D0",
-            borderwidth=1,
+            borderwidth=1
         ),
         xaxis=dict(gridcolor="#EFECE6", zerolinecolor="#DCD6D0", showline=True, linecolor="#DCD6D0"),
         yaxis=dict(gridcolor="#EFECE6", zerolinecolor="#DCD6D0", showline=True, linecolor="#DCD6D0"),
         plot_bgcolor="white",
         paper_bgcolor="white",
-        margin=dict(l=50, r=40, t=80, b=50),
+        margin=dict(l=50, r=25, t=85, b=70)
     )
     return fig
 
 
-def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
-    """Crea el gráfico de burbujas interactivo (Stock vs. Ventas + estado de reposición)."""
-    tienePredicciones = (
-        Ventas.COL_PREDICCION in dfConsolidado.columns
-        and Ventas.COL_PREDICCION_DL in dfConsolidado.columns
-    )
-
+def crearGraficoBurbujas(dfConsolidado):
+    #? Gráfico de burbujas interactivo: Stock Actual vs Unidades Vendidas
     columnasCustom = [
         Inventario.COL_VARIETAL,
         Inventario.COL_LINEA,
         Ventas.COL_INGRESO,
         Inventario.COL_REPOSICION,
         Inventario.COL_REPOSICION_NECESARIA,
+        Ventas.COL_PREDICCION,
+        Ventas.COL_PREDICCION_DL
     ]
-    if tienePredicciones:
-        columnasCustom.extend([Ventas.COL_PREDICCION, Ventas.COL_PREDICCION_DL])
 
     fig = px.scatter(
         dfConsolidado,
@@ -86,26 +77,20 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
         labels={
             Ventas.COL_UNIDADESV: "Unidades Vendidas (Popularidad)",
             Inventario.COL_STOCK: "Stock Actual (Botellas en Depósito)",
-            Inventario.COL_REPOSICION_NECESARIA: "¿Requiere Reposición?",
+            Inventario.COL_REPOSICION_NECESARIA: "¿Requiere Reposición?"
         },
         size_max=48,
-        custom_data=columnasCustom,
+        custom_data=columnasCustom
     )
-
-    extraHover = ""
-    if tienePredicciones:
-        extraHover = (
-            "<b>Demanda Anual Est. (OLS):</b> %{customdata[5]:,.0f} u.<br>"
-            "<b>Demanda Anual Est. (Red Neuronal):</b> %{customdata[6]:,.0f} u.<br>"
-        )
 
     fig.update_traces(
         hovertemplate=(
             "<b>%{customdata[0]} — Línea %{customdata[1]}</b><br>"
             "───────────────────────────────<br>"
             "<b>Ventas Reales:</b> %{x:,} botellas<br>"
-            + extraHover
-            + "<b>Stock Actual:</b> %{y:,} botellas<br>"
+            "<b>Demanda Anual Est. (OLS):</b> %{customdata[5]:,.0f} u.<br>"
+            "<b>Demanda Anual Est. (Red Neuronal):</b> %{customdata[6]:,.0f} u.<br>"
+            "<b>Stock Actual:</b> %{y:,} botellas<br>"
             "<b>Punto de Reposición:</b> %{customdata[3]:,} botellas<br>"
             "<b>Ingreso Total:</b> $%{customdata[2]:,.2f} USD<br>"
             "<b>¿Requiere Reposición?:</b> %{customdata[4]}<br>"
@@ -113,9 +98,7 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
         )
     )
 
-    #? Botones nativos de Plotly para filtrar por estado de reposición.
-    #? Plotly crea un trazo por cada valor de 'Reposicion Necesaria' en el orden en que aparece en los datos
-    #? (no siempre "SI" primero), por eso la visibilidad se arma según el nombre real de cada trazo.
+    #? Botones arriba a la derecha para filtrar rápido por estado de reposición
     nombresTrazos = [trazo.name for trazo in fig.data]
     fig.update_layout(
         updatemenus=[
@@ -131,29 +114,33 @@ def crearGraficoBurbujas(dfConsolidado: pd.DataFrame) -> go.Figure:
                     dict(label="Solo Alerta Reposición (SI)", method="update",
                          args=[{"visible": [nombre == "SI" for nombre in nombresTrazos]}]),
                     dict(label="Solo Stock OK (NO)", method="update",
-                         args=[{"visible": [nombre == "NO" for nombre in nombresTrazos]}]),
-                ],
+                         args=[{"visible": [nombre == "NO" for nombre in nombresTrazos]}])
+                ]
             )
         ]
     )
 
-    return _aplicarEstiloPlotly(
+    return aplicarEstiloPlotly(
         fig,
         "<b>Análisis de Inventario vs. Popularidad de Ventas</b><br>"
-        "<sup>Tamaño = Ingreso Total (USD) · Color = Alerta de Reposición</sup>",
+        "<sup>Tamaño = Ingreso Total (USD) · Color = Alerta de Reposición</sup>"
     )
 
 
-def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
-    """Compara las unidades medias Reales vs. Predicción OLS vs. Predicción Deep Learning por Estación y Varietal."""
+def crearGraficoComparativaModelos(dfVentas):
+    #? Gráfico de barras que compara Venta Real vs OLS vs Red Neuronal en cada estación
     ordenEstaciones = Ventas.ORDEN_ESTACIONES
-    varietales = ["Todos", *sorted(dfVentas[Ventas.COL_VARIETAL].unique().tolist())]
+    varietales = ["Todos"] + sorted(dfVentas[Ventas.COL_VARIETAL].unique().tolist())
 
     fig = go.Figure()
     botones = []
 
     for idx, var in enumerate(varietales):
-        dfSub = dfVentas if var == "Todos" else dfVentas[dfVentas[Ventas.COL_VARIETAL] == var]
+        if var == "Todos":
+            dfSub = dfVentas
+        else:
+            dfSub = dfVentas[dfVentas[Ventas.COL_VARIETAL] == var]
+
         resumen = (
             dfSub.groupby(Ventas.COL_ESTACION)[
                 [Ventas.COL_UNIDADESV, Ventas.COL_PREDICCION, Ventas.COL_PREDICCION_DL]
@@ -162,7 +149,7 @@ def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
             .reindex(ordenEstaciones)
             .reset_index()
         )
-        visible = idx == 0
+        visible = (idx == 0)
 
         fig.add_trace(
             go.Bar(
@@ -171,7 +158,7 @@ def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
                 y=resumen[Ventas.COL_UNIDADESV],
                 marker_color=COLOR_BORDO,
                 visible=visible,
-                hovertemplate="<b>Real:</b> %{y:.1f} botellas<extra></extra>",
+                hovertemplate="<b>Real:</b> %{y:.1f} botellas<extra></extra>"
             )
         )
         fig.add_trace(
@@ -181,7 +168,7 @@ def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
                 y=resumen[Ventas.COL_PREDICCION],
                 marker_color="#8E9AAF",
                 visible=visible,
-                hovertemplate="<b>OLS:</b> %{y:.1f} botellas<extra></extra>",
+                hovertemplate="<b>OLS:</b> %{y:.1f} botellas<extra></extra>"
             )
         )
         fig.add_trace(
@@ -191,7 +178,7 @@ def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
                 y=resumen[Ventas.COL_PREDICCION_DL],
                 marker_color=COLOR_DORADO,
                 visible=visible,
-                hovertemplate="<b>Red Neuronal:</b> %{y:.1f} botellas<extra></extra>",
+                hovertemplate="<b>Red Neuronal:</b> %{y:.1f} botellas<extra></extra>"
             )
         )
 
@@ -201,37 +188,41 @@ def crearGraficoComparativaModelos(dfVentas: pd.DataFrame) -> go.Figure:
             dict(
                 label=f"Varietal: {var}",
                 method="update",
-                args=[{"visible": visMask}],
+                args=[{"visible": visMask}]
             )
         )
 
     fig.update_layout(
+        width=580,
+        height=400,
         barmode="group",
         xaxis_title="Estación del Año",
         yaxis_title="Promedio de Unidades por Transacción",
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5),
         updatemenus=[
             dict(
                 active=0,
                 buttons=botones,
                 x=1.0,
-                y=1.16,
+                y=1.18,
                 xanchor="right",
                 bgcolor="#FAF7F5",
-                bordercolor=COLOR_BORDO,
+                bordercolor=COLOR_BORDO
             )
-        ],
+        ]
     )
 
-    return _aplicarEstiloPlotly(
+    fig = aplicarEstiloPlotly(
         fig,
         "<b>Comparación de Modelos: Ventas Reales vs. OLS vs. Deep Learning</b><br>"
-        "<sup>Promedios sobre todo el histórico (la métrica fuera de muestra está en los KPIs y el simulador). "
-        "Observá cómo cada modelo sigue el efecto de la estación en cada varietal</sup>",
+        "<sup>Promedios por estación (filtrable por varietal arriba a la derecha)</sup>"
     )
+    fig.update_layout(legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5))
+    return fig
 
 
-def crearGraficoCurvaAprendizaje(historyDict: dict) -> go.Figure:
-    """Grafica la evolución del error (Loss MSE) en entrenamiento y validación por época."""
+def crearGraficoCurvaAprendizaje(historyDict):
+    #? Gráfico de líneas mostrando cómo baja el error MSE durante las 50 épocas de entrenamiento
     epocas = list(range(1, len(historyDict.get("loss", [])) + 1))
     fig = go.Figure()
 
@@ -241,7 +232,7 @@ def crearGraficoCurvaAprendizaje(historyDict: dict) -> go.Figure:
             y=historyDict.get("loss", []),
             mode="lines+markers",
             name="Entrenamiento (Train MSE)",
-            line=dict(color=COLOR_BORDO, width=2.5),
+            line=dict(color=COLOR_BORDO, width=2.5)
         )
     )
     fig.add_trace(
@@ -250,125 +241,101 @@ def crearGraficoCurvaAprendizaje(historyDict: dict) -> go.Figure:
             y=historyDict.get("val_loss", []),
             mode="lines+markers",
             name="Validación (Val MSE)",
-            line=dict(color=COLOR_DORADO, width=2.5, dash="dash"),
+            line=dict(color=COLOR_DORADO, width=2.5, dash="dash")
         )
     )
 
     fig.update_layout(
+        width=580,
+        height=400,
         xaxis_title="Época (Epoch)",
         yaxis_title="Error Cuadrático Medio (MSE)",
+        legend=dict(orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5)
     )
 
-    return _aplicarEstiloPlotly(
+    fig = aplicarEstiloPlotly(
         fig,
         "<b>Curva de Aprendizaje — Red Neuronal (Keras Dense 32→16→1)</b><br>"
-        "<sup>Evolución de la función de pérdida (MSE) en entrenamiento y validación a lo largo de las épocas</sup>",
+        "<sup>Evolución del error (MSE) en entrenamiento y validación por época</sup>"
     )
+    fig.update_layout(legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5))
+    return fig
 
 
-def generarDashboardHtml(
-    datos: dict,
-    rutaHeatmapPng: str | None = None,
-    rutaBarrasPng: str | None = None,
-    abrirNavegador: bool = True,
-) -> str:
-    """Construye y guarda el Dashboard HTML único e interactivo (`visuals/reporte_interactivo.html`).
+def generarDashboardHtml(datos, rutaHeatmapPng=None, rutaBarrasPng=None, abrirNavegador=True):
+    #? Arma el archivo visuals/reporte_interactivo.html uniendo todos los gráficos, KPIs, tablas y simulador
+    dfVentas = datos["ventas"]
+    dfInventario = datos["inventario"]
+    dfConsolidado = datos["consolidado"]
+    metricasOls = datos["estadistica"]
+    datosDl = datos["deepLearning"]
+    metricasDl = datosDl["metricas"]
+    desc = metricasOls["descriptiva"]
 
-    Incluye: barra de filtros, tarjetas de KPIs, gráficos de Plotly (burbujas de inventario, comparativa
-    Real vs. OLS vs. Deep Learning y curva de aprendizaje), los PNG de Matplotlib y Seaborn incrustados
-    en Base64, las tablas de estadística descriptiva / OLS y el simulador de demanda.
-
-    Nota: el JavaScript de Plotly se carga desde su CDN oficial, así que la página necesita conexión a
-    internet para dibujar los gráficos interactivos. El resto del contenido (KPIs, tablas, imágenes,
-    filtros y simulador) está incrustado en el propio archivo.
-
-    Args:
-        datos: Diccionario devuelto por ``dataProcessing.procesarDatos()``.
-        rutaHeatmapPng: Ruta del PNG del mapa de calor (Matplotlib) a incrustar.
-        rutaBarrasPng: Ruta del PNG del gráfico de barras (Seaborn) a incrustar.
-        abrirNavegador: Si es True, abre el HTML generado en el navegador predeterminado.
-
-    Returns:
-        Ruta absoluta del archivo HTML generado.
-    """
-    dfVentas: pd.DataFrame = datos["ventas"]
-    dfInventario: pd.DataFrame = datos["inventario"]
-    dfConsolidado: pd.DataFrame = datos["consolidado"]
-    metricasOls: dict = datos["estadistica"]
-    datosDl: dict = datos["deepLearning"]
-    metricasDl: dict = datosDl["metricas"]
-    desc: dict = metricasOls["descriptiva"]
-
-    #? 1. Figuras interactivas de Plotly exportadas como fragmentos HTML
-    #? Plotly.js se carga una sola vez desde el CDN (include_plotlyjs="cdn"): mantiene el HTML liviano
-    #? pero requiere internet para ver los gráficos interactivos (ver README).
+    #? 1. Convertimos las figuras de Plotly a bloques HTML
     figBurbujas = crearGraficoBurbujas(dfConsolidado)
     figComparativa = crearGraficoComparativaModelos(dfVentas)
     figCurva = crearGraficoCurvaAprendizaje(datosDl["history"])
 
-    htmlBurbujas = figBurbujas.to_html(full_html=False, include_plotlyjs="cdn")
-    htmlComparativa = figComparativa.to_html(full_html=False, include_plotlyjs=False)
-    htmlCurva = figCurva.to_html(full_html=False, include_plotlyjs=False)
+    htmlBurbujas = figBurbujas.to_html(full_html=False, include_plotlyjs="cdn", config={"responsive": True})
+    htmlComparativa = figComparativa.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
+    htmlCurva = figCurva.to_html(full_html=False, include_plotlyjs=False, config={"responsive": True})
 
-    #? 2. Imágenes estáticas de Matplotlib y Seaborn en Base64 (viajan dentro del propio HTML)
-    b64Heatmap = _imagenABase64(rutaHeatmapPng) if rutaHeatmapPng else ""
-    b64Barras = _imagenABase64(rutaBarrasPng) if rutaBarrasPng else ""
+    #? 2. Pasamos las imágenes PNG de Matplotlib y Seaborn a Base64
+    b64Heatmap = imagenABase64(rutaHeatmapPng)
+    b64Barras = imagenABase64(rutaBarrasPng)
 
-    #? 3. Opciones de los filtros y del simulador, generadas desde los datos (sin listas escritas a mano)
+    #? 3. Armamos las opciones de los desplegables de filtros y del simulador a partir de los datos
     varietales = sorted(dfVentas[Ventas.COL_VARIETAL].unique())
     estaciones = [e for e in Ventas.ORDEN_ESTACIONES if e in set(dfVentas[Ventas.COL_ESTACION])]
     canales = sorted(dfVentas[Ventas.COL_CANAL].unique())
-    #? Líneas ordenadas por precio medio (Joven < Reserva < Gran Reserva), con su rango de precios real
-    preciosPorLinea = dfVentas.groupby(Ventas.COL_LINEA)[Ventas.COL_PRECIOU].agg(["mean", "min", "max"]).sort_values("mean")
-    opcionesLineaSim = "".join(
-        f'<option value="{escape(str(lin))}">{escape(str(lin))} (${fila["min"]:.0f} - ${fila["max"]:.0f} USD)</option>'
-        for lin, fila in preciosPorLinea.iterrows()
-    )
-    opcionesVarietalFiltro = _opcionesHtml(varietales, "Todos los Varietales")
-    opcionesEstacionFiltro = _opcionesHtml(estaciones, "Todas las Estaciones")
-    opcionesCanalFiltro = _opcionesHtml(canales, "Todos los Canales")
-    opcionesVarietalSim = _opcionesHtml(varietales)
-    opcionesEstacionSim = _opcionesHtml(estaciones)
-    opcionesCanalSim = _opcionesHtml(canales)
 
-    #? 4. Registros por transacción para los filtros de KPIs y el simulador (se calculan en el navegador)
+    preciosPorLinea = dfVentas.groupby(Ventas.COL_LINEA)[Ventas.COL_PRECIOU].agg(["mean", "min", "max"]).sort_values("mean")
+    opcionesLineaSim = ""
+    for lin, fila in preciosPorLinea.iterrows():
+        opcionesLineaSim += f'<option value="{lin}">{lin} (${fila["min"]:.0f} - ${fila["max"]:.0f} USD)</option>'
+
+    opcionesVarietalFiltro = armarOpcionesSelect(varietales, "Todos los Varietales")
+    opcionesEstacionFiltro = armarOpcionesSelect(estaciones, "Todas las Estaciones")
+    opcionesCanalFiltro = armarOpcionesSelect(canales, "Todos los Canales")
+    opcionesVarietalSim = armarOpcionesSelect(varietales)
+    opcionesEstacionSim = armarOpcionesSelect(estaciones)
+    opcionesCanalSim = armarOpcionesSelect(canales)
+
+    #? 4. Pasamos las filas de ventas a JSON para que los filtros y el simulador recalculen rápido en el navegador
     registrosJson = []
     for _, fila in dfVentas.iterrows():
-        registrosJson.append(
-            {
-                "varietal": str(fila[Ventas.COL_VARIETAL]),
-                "linea": str(fila[Ventas.COL_LINEA]),
-                "canal": str(fila[Ventas.COL_CANAL]),
-                "estacion": str(fila[Ventas.COL_ESTACION]),
-                "precio": float(fila[Ventas.COL_PRECIOU]),
-                "unidades": int(fila[Ventas.COL_UNIDADESV]),
-                "ingreso": float(fila[Ventas.COL_INGRESO]),
-                "predOls": float(fila[Ventas.COL_PREDICCION]),
-                "predDl": float(fila[Ventas.COL_PREDICCION_DL]),
-            }
-        )
+        registrosJson.append({
+            "varietal": str(fila[Ventas.COL_VARIETAL]),
+            "linea": str(fila[Ventas.COL_LINEA]),
+            "canal": str(fila[Ventas.COL_CANAL]),
+            "estacion": str(fila[Ventas.COL_ESTACION]),
+            "precio": float(fila[Ventas.COL_PRECIOU]),
+            "unidades": int(fila[Ventas.COL_UNIDADESV]),
+            "ingreso": float(fila[Ventas.COL_INGRESO]),
+            "predOls": float(fila[Ventas.COL_PREDICCION]),
+            "predDl": float(fila[Ventas.COL_PREDICCION_DL])
+        })
 
     skusTotal = int(len(dfInventario))
     skusReponer = int((dfInventario[Inventario.COL_REPOSICION_NECESARIA] == "SI").sum())
 
-    #? Coeficientes del modelo OLS para el simulador interactivo y para la tabla técnica
-    coefsOls = metricasOls["coeficientes"]
-    filasCoefHtml = "".join(
-        f"<tr><td>{var}</td><td style='text-align:right; font-weight:bold;'>{val:,.4f}</td></tr>"
-        for var, val in coefsOls.items()
-    )
+    #? Filas para la tabla de coeficientes OLS y la tabla de Estadística Descriptiva
+    filasCoefHtml = ""
+    for var, val in metricasOls["coeficientes"].items():
+        filasCoefHtml += f"<tr><td>{var}</td><td style='text-align:right; font-weight:bold;'>{val:,.4f}</td></tr>"
 
-    resumenDesc = desc["resumen"]
-    filasDescHtml = "".join(
-        f"<tr>"
-        f"<td><b>{col}</b></td>"
-        f"<td style='text-align:right;'>{vals['media']:,.2f}</td>"
-        f"<td style='text-align:right;'>{vals['mediana']:,.2f}</td>"
-        f"<td style='text-align:right;'>{vals['desvio']:,.2f}</td>"
-        f"<td style='text-align:right;'>{vals['minimo']:,.2f} – {vals['maximo']:,.2f}</td>"
-        f"</tr>"
-        for col, vals in resumenDesc.items()
-    )
+    filasDescHtml = ""
+    for col, vals in desc["resumen"].items():
+        filasDescHtml += (
+            f"<tr>"
+            f"<td><b>{col}</b></td>"
+            f"<td style='text-align:right;'>{vals['media']:,.2f}</td>"
+            f"<td style='text-align:right;'>{vals['mediana']:,.2f}</td>"
+            f"<td style='text-align:right;'>{vals['desvio']:,.2f}</td>"
+            f"<td style='text-align:right;'>{vals['minimo']:,.2f} – {vals['maximo']:,.2f}</td>"
+            f"</tr>"
+        )
 
     htmlCompleto = f"""<!DOCTYPE html>
 <html lang="es">
@@ -414,7 +381,6 @@ def generarDashboardHtml(
         }}
         .contenedor {{ max-width: 1380px; margin: 0 auto; padding: 24px 32px; }}
 
-        /* Barra de Filtros Globales */
         .barra-filtros {{
             background: white;
             border: 1px solid #E2DCD5;
@@ -450,7 +416,6 @@ def generarDashboardHtml(
         }}
         .btn-reset:hover {{ background: var(--carmin); }}
 
-        /* Grilla de KPIs */
         .grilla-kpis {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -470,7 +435,6 @@ def generarDashboardHtml(
         .kpi-valor {{ font-size: 24px; font-weight: bold; color: var(--texto); margin: 6px 0 4px; }}
         .kpi-sub {{ font-size: 12px; color: #555; }}
 
-        /* Secciones y Tarjetas */
         .titulo-seccion {{
             font-size: 20px;
             color: var(--bordo);
@@ -485,6 +449,8 @@ def generarDashboardHtml(
             margin-bottom: 22px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             border: 1px solid #EAE4DC;
+            min-width: 0;
+            overflow: hidden;
         }}
         .grilla-dos {{
             display: grid;
@@ -497,7 +463,6 @@ def generarDashboardHtml(
         td {{ padding: 9px 10px; border-bottom: 1px solid #EFECE6; }}
         tr:nth-child(even) {{ background: #FAF7F5; }}
 
-        /* Simulador */
         .simulador-box {{
             background: #FDFBF7;
             border: 2px solid var(--dorado);
@@ -732,7 +697,7 @@ def generarDashboardHtml(
     </div>
 
     <footer>
-        WineLytics V2 · Instituto Superior Manuel Belgrano · Programación Orientada al Análisis de Datos (2026)
+        WineLytics-V2 · Instituto Superior Manuel Belgrano · Programación Orientada al Análisis de Datos (2026)
     </footer>
 
     <script>
@@ -798,21 +763,22 @@ def generarDashboardHtml(
                 return;
             }}
 
-            const n = segmento.length;
-            const mediaReal = segmento.reduce((a, d) => a + d.unidades, 0) / n;
-            const mediaOls = segmento.reduce((a, d) => a + d.predOls, 0) / n;
-            const mediaDl = segmento.reduce((a, d) => a + d.predDl, 0) / n;
-            const mediaPrecio = segmento.reduce((a, d) => a + d.precio, 0) / n;
+            const promReal = segmento.reduce((a, d) => a + d.unidades, 0) / segmento.length;
+            const promOls = segmento.reduce((a, d) => a + d.predOls, 0) / segmento.length;
+            const promDl = segmento.reduce((a, d) => a + d.predDl, 0) / segmento.length;
+            const promPrecio = segmento.reduce((a, d) => a + d.precio, 0) / segmento.length;
 
-            document.getElementById("simReal").textContent = Math.round(mediaReal) + " botellas";
+            document.getElementById("simReal").textContent = promReal.toFixed(1) + " botellas";
+            document.getElementById("simOls").textContent = promOls.toFixed(1) + " botellas";
+            document.getElementById("simDl").textContent = promDl.toFixed(1) + " botellas";
             document.getElementById("simPrecio").textContent =
-                "Precio medio segmento: $" + mediaPrecio.toFixed(2) + " USD (" + n + " muestras)";
-            document.getElementById("simOls").textContent = Math.round(mediaOls) + " botellas";
-            document.getElementById("simDl").textContent = Math.round(mediaDl) + " botellas";
+                "Basado en " + segmento.length + " ventas (Precio medio: $" + promPrecio.toFixed(2) + " USD)";
         }}
 
-        actualizarKPIs();
-        actualizarSimulador();
+        window.addEventListener("DOMContentLoaded", () => {{
+            actualizarKPIs();
+            actualizarSimulador();
+        }});
     </script>
 </body>
 </html>
@@ -820,8 +786,9 @@ def generarDashboardHtml(
 
     baseDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rutaHtml = os.path.join(baseDir, "visuals", "reporte_interactivo.html")
-    with open(rutaHtml, "w", encoding="utf-8") as f:
-        f.write(htmlCompleto)
+
+    with open(rutaHtml, "w", encoding="utf-8") as archivo:
+        archivo.write(htmlCompleto)
 
     print(f"Dashboard HTML unificado guardado exitosamente en: {rutaHtml}")
 
@@ -829,7 +796,6 @@ def generarDashboardHtml(
         try:
             webbrowser.open(f"file://{os.path.abspath(rutaHtml)}")
         except Exception as e:
-            print(f"No se pudo abrir automáticamente el navegador web: {e}")
+            print(f"No se pudo abrir automáticamente el navegador: {e}")
 
     return rutaHtml
-

@@ -5,56 +5,38 @@ from schema.ventas import Ventas
 from backend.statsAnalysis import ejecutarAnalisisEstadistico
 from backend.deepLearning import entrenarModeloDeepLearning, agregarPrediccionesDL
 
-
 def procesarDatos():
-    """Ejecuta el pipeline de datos completo: ETL, análisis estadístico y Deep Learning.
-
-    Carga y limpia los CSV (`sources/`), ajusta el modelo OLS y la red neuronal (`backend/`),
-    agrega sus predicciones al DataFrame de ventas y lo cruza con el inventario.
-
-    Returns:
-        Diccionario con:
-            - ``inventario``: DataFrame de inventario limpio.
-            - ``ventas``: DataFrame de ventas con ``Prediccion_Ventas`` y ``Prediccion_DL``.
-            - ``consolidado``: inventario + ventas/predicciones agrupadas por Varietal y Línea.
-            - ``estadistica``: métricas del OLS y estadística descriptiva.
-            - ``deepLearning``: métricas, historial de entrenamiento, valores de test y modelo de la red.
-            - ``modeloOls``: modelo OLS ajustado (``statsmodels``).
-    """
-    #? 1. Cargar los DataFrames desde los CSV pasando por los módulos de limpieza y estructuración (sources/)
+    #? 1. Cargar los DataFrames desde los CSV, pero pasando primero por los sources que estructuran y limpian
     dfInventario = cargarInventario()
     dfVentas = cargarVentas()
 
-    #? 2. Ejecutar análisis estadístico (OLS + estadística descriptiva con NumPy/SciPy)
-    #? Agrega la columna 'Prediccion_Ventas' al DataFrame de ventas
+    #? 2. Ejecutar el análisis estadístico (OLS + estadística descriptiva con NumPy y SciPy)
+    #? Esto le suma la columna 'Prediccion_Ventas' a dfVentas
     dfVentas, metricasOls, modeloOls = ejecutarAnalisisEstadistico(dfVentas)
 
-    #? 3. Entrenar modelo de Aprendizaje Profundo (Red Neuronal Keras) y generar 'Prediccion_DL'
+    #? 3. Entrenar la Red Neuronal (Keras) y agregar la columna 'Prediccion_DL' a dfVentas
     modeloDl, historyDl, metricasDl, (xTest, yTest, yPredDl) = entrenarModeloDeepLearning(dfVentas)
     dfVentas = agregarPrediccionesDL(dfVentas, modeloDl)
 
-    #? 4. Agrupar las ventas por Varietal y Línea para calcular totales reales y pronosticados
-    columnasSuma = [
+    #? 4. Agrupar las ventas por Varietal y Linea para sumar unidades reales, ingresos y predicciones de cada vino
+    columnasASumar = [
         Ventas.COL_UNIDADESV,
         Ventas.COL_INGRESO,
         Ventas.COL_PREDICCION,
-        Ventas.COL_PREDICCION_DL,
+        Ventas.COL_PREDICCION_DL
     ]
-    ventasResumen = (
-        dfVentas.groupby([Ventas.COL_VARIETAL, Ventas.COL_LINEA])[columnasSuma]
-        .sum()
-        .reset_index()
-    )
+    ventasResumen = dfVentas.groupby([Ventas.COL_VARIETAL, Ventas.COL_LINEA])[columnasASumar].sum().reset_index()
 
-    #? 5. Cruzar ('Mergear') el inventario con el resumen de ventas e indicadores predictivos
+    #? 5. Cruzar ('Mergear') el inventario con el resumen de ventas
+    #? Usamos 'inner' porque queremos analizar los vinos que existen en ambos datasets
     dfConsolidado = pd.merge(
         dfInventario,
         ventasResumen,
         on=[Ventas.COL_VARIETAL, Ventas.COL_LINEA],
-        how="inner",
+        how="inner"
     )
 
-    #? Retornamos los DataFrames enriquecidos y los resultados del backend en un diccionario unificado
+    #? Retornamos los DataFrames estructurados y los resultados del backend en un diccionario
     return {
         "inventario": dfInventario,
         "ventas": dfVentas,
@@ -65,11 +47,10 @@ def procesarDatos():
             "history": historyDl.history,
             "yTest": yTest.tolist(),
             "yPred": yPredDl.tolist(),
-            "modelo": modeloDl,
+            "modelo": modeloDl
         },
-        "modeloOls": modeloOls,
+        "modeloOls": modeloOls
     }
-
 
 if __name__ == "__main__":
     resultados = procesarDatos()

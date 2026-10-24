@@ -177,3 +177,25 @@ Cada entrada indica **qué** se cambió, **por qué** y los **archivos** afectad
 - **Por qué:** unificar los cambios finales de código/documentación con el archivo PDF de entrega del Parcial N°2 sin perder commits ni generar conflictos.
 - **Archivos:** `ParcialN°2_FrancoCiccarelli_2do4ta.pdf`, `CHANGELOG.md`.
 - **Resultado:** historial lineal y sincronizado con `origin/main`.
+
+### 13. Auditoría final de documentación frente a las consignas del Examen Parcial N°2 y el estado actual del repositorio
+- **Qué:**
+  - Se verificó el cumplimiento punto por punto de `consignas_examen_parcial_nro_2.md` (Programación 50% + Documentación 50%).
+  - Se regeneraron los artefactos locales (`data/*.csv`, `visuals/*.png` y `visuals/reporte_interactivo.html`) corriendo `main.py` con las últimas correcciones.
+  - Se actualizaron `DOCUMENTACION_PARCIAL2.md`, `EXPLICACION_FLUJO_PROYECTO.md` y `analisis_estado_parcial2.md` para reflejar los cambios del commit `f8d2bc7`: función `asegurarDatos()` en `main.py`, regla centralizada `Ventas.obtenerEstacion()` y `Ventas.ORDEN_ESTACIONES` en `schema/ventas.py`, selectores dinámicos, título del KPI `R² de los Modelos (Test 20%)`, visibilidad dinámica de botones en `plotlyUtils.py`, aclaración del CDN de Plotly en la FAQ y nombre del estudiante (`Franco Ciccarelli`) en la portada.
+- **Por qué:** asegurar que toda la documentación técnica, de usuario y de estudio coincida al 100% con el código actual del repositorio y con la rúbrica del examen.
+- **Archivos:** `CHANGELOG.md` (y archivos locales `DOCUMENTACION_PARCIAL2.md`, `EXPLICACION_FLUJO_PROYECTO.md`, `analisis_estado_parcial2.md`).
+- **Resultado:** documentación y código 100% alineados y verificados contra todas las consignas del Parcial N°2.
+
+---
+
+## 2026-10-24
+
+### 14. Simplificación del código al estilo original del proyecto y rediseño de `ParcialN°2_FrancoCiccarelli_2do4ta.pdf` siguiendo el formato del Parcial 1
+- **Qué:**
+  - En la rama `simplificacionFinal`, se simplificaron todos los archivos de Python (`main.py`, `dataProcessing.py`, `schema/`, `sources/`, `backend/`, `visuals/`) y `README.md` para mantener el estilo original del Parcial 1 (comentarios `#?` / `#!`, funciones directas sin anotaciones de tipos complejas `typing` ni docstrings extensos), conservando exactamente la misma funcionalidad, datos y métricas.
+  - En `visuals/plotlyUtils.py` se ajustó el ancho y la leyenda horizontal de los dos gráficos de la Sección 3 para que entren completos dentro de sus tarjetas sin recortarse.
+  - Se rediseñaron `DOCUMENTACION_PARCIAL2.md`, `DOCUMENTACION_PARCIAL2.html` y `ParcialN°2_FrancoCiccarelli_2do4ta.pdf` tomando como base el diseño, tono de redacción, tipografía, portada, encabezados borravinos/azules, tablas oscuras (`#262626`) y capturas señalizadas con flechas/recuadros del documento del Parcial 1 (`ParcialNro1-FrancoCiccarelli2do4ta.pdf`), eliminando además la ruta y la hora del navegador en los bordes del PDF.
+- **Por qué:** lograr que tanto el código como el PDF de entrega tengan una lectura natural y coherente con la entrega del Primer Parcial, cumpliendo todos los puntos exigidos en el Parcial 2.
+- **Archivos:** `main.py`, `dataProcessing.py`, `schema/inventario.py`, `schema/ventas.py`, `sources/generadorDeDatos.py`, `sources/inventarioCsv.py`, `sources/ventasCsv.py`, `backend/statsAnalysis.py`, `backend/deepLearning.py`, `visuals/matplotUtils.py`, `visuals/seabornUtils.py`, `visuals/plotlyUtils.py`, `README.md`, `ParcialN°2_FrancoCiccarelli_2do4ta.pdf`, `.gitignore`, `CHANGELOG.md`.
+- **Resultado:** el pipeline completo corre sin errores ni advertencias y el nuevo PDF de 17 páginas queda limpio y listo para presentar.

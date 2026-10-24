@@ -1,43 +1,37 @@
 import os
-
 from dataProcessing import procesarDatos
 from sources.generadorDeDatos import main as generarDatos, DATA_DIR
 from visuals.matplotUtils import graficarEstacionalidadVarietales
 from visuals.seabornUtils import graficarVentasXCanal
 from visuals.plotlyUtils import generarDashboardHtml
 
-
 def asegurarDatos():
-    """Genera los CSV de data/ si todavía no existen (están excluidos de git).
+    #? Si todavía no están creados los CSV en data/, los generamos automáticamente con la semilla 42
+    rutaVentas = os.path.join(DATA_DIR, "ventas.csv")
+    rutaInventario = os.path.join(DATA_DIR, "inventario.csv")
 
-    La generación es reproducible (semilla 42): siempre produce los mismos datos.
-    """
-    archivos = ["ventas.csv", "inventario.csv"]
-    if not all(os.path.exists(os.path.join(DATA_DIR, archivo)) for archivo in archivos):
+    if not os.path.exists(rutaVentas) or not os.path.exists(rutaInventario):
         print("No se encontraron los CSV en data/. Generándolos automáticamente...")
         generarDatos()
 
-
 def main():
-    """Orquesta todo el proyecto: datos -> ETL y modelos -> gráficos -> dashboard HTML."""
-    #? 0. Si es la primera ejecución (data/ vacío), generar los datos sintéticos
+    #? 0. Verificamos que existan los archivos de datos antes de arrancar
     asegurarDatos()
 
-    #? 1. Ejecutar ETL + Análisis Estadístico (OLS / SciPy) + Aprendizaje Profundo (Keras / TensorFlow)
+    #? 1. Procesamos los datos (ETL) y corremos los modelos de Estadística y Deep Learning
     datos = procesarDatos()
 
-    #? 2. Generar y guardar las visualizaciones de Matplotlib y Seaborn con paleta unificada
+    #? 2. Generamos y guardamos los gráficos de Matplotlib y Seaborn en visuals/
     rutaHeatmap = graficarEstacionalidadVarietales(datos["ventas"], mostrarVentana=False)
     rutaBarras = graficarVentasXCanal(datos["ventas"], mostrarVentana=False)
 
-    #? 3. Construir y abrir el Dashboard HTML único con KPIs, filtros, gráficos y simulador
+    #? 3. Armamos el dashboard HTML interactivo con todos los gráficos, KPIs y el simulador
     generarDashboardHtml(
         datos=datos,
         rutaHeatmapPng=rutaHeatmap,
         rutaBarrasPng=rutaBarras,
-        abrirNavegador=True,
+        abrirNavegador=True
     )
-
 
 if __name__ == "__main__":
     main()

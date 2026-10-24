@@ -3,7 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from schema.ventas import Ventas
 
-#? Paleta unificada "Bodega / Vino" (Guía de estilo del proyecto)
+#? Colores de la guía de estilo del proyecto ("Bodega / Vino")
 COLOR_BORDO = "#722F37"
 COLOR_DORADO = "#C59B27"
 COLOR_TEXTO = "#2C3E50"
@@ -14,17 +14,9 @@ ORDEN_MESES = [
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ]
 
+def graficarVentasXCanal(df, mostrarVentana=False):
+    #? Genera el gráfico de barras agrupadas con Seaborn comparando las ventas por mes y canal
 
-def graficarVentasXCanal(df, mostrarVentana: bool = False):
-    """Genera y guarda el gráfico de barras con Seaborn de unidades vendidas por mes y canal.
-
-    Args:
-        df: DataFrame de ventas enriquecido.
-        mostrarVentana: Si es True, abre la ventana interactiva de Matplotlib (`plt.show()`).
-
-    Returns:
-        Ruta absoluta del archivo PNG generado, o None si el DataFrame está vacío.
-    """
     #? Check de si se crearon los datos o no antes de ejecutar los graficos
     if df is None or df.empty:
         print("El DataFrame está vacío o no existe.")
@@ -33,9 +25,11 @@ def graficarVentasXCanal(df, mostrarVentana: bool = False):
     fig, ax = plt.subplots(figsize=(12, 6), facecolor=COLOR_FONDO)
     ax.set_facecolor(COLOR_FONDO)
 
-    mesesPresentes = [m for m in ORDEN_MESES if m in df[Ventas.COL_MES].unique()]
-    if not mesesPresentes:
-        mesesPresentes = list(df.sort_values(by=Ventas.COL_FECHA)[Ventas.COL_MES].unique())
+    mesesPresentes = []
+    mesesEnDf = df[Ventas.COL_MES].unique()
+    for m in ORDEN_MESES:
+        if m in mesesEnDf:
+            mesesPresentes.append(m)
 
     sns.barplot(
         data=df,
@@ -46,7 +40,7 @@ def graficarVentasXCanal(df, mostrarVentana: bool = False):
         estimator=sum,
         errorbar=None,
         palette={"Mercado Interno": COLOR_BORDO, "Exportación": COLOR_DORADO},
-        ax=ax,
+        ax=ax
     )
 
     ax.set_title(
@@ -62,6 +56,7 @@ def graficarVentasXCanal(df, mostrarVentana: bool = False):
 
     plt.tight_layout()
 
+    # Guardar imagen PNG en la carpeta visuals/ para sumarla al dashboard
     baseDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rutaPng = os.path.join(baseDir, "visuals", "UnidadesXCanalyMes.png")
     fig.savefig(rutaPng, dpi=150, bbox_inches="tight", facecolor=COLOR_FONDO)
